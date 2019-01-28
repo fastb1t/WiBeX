@@ -1,0 +1,14 @@
+#define IDM_MENU 1045
+
+#define IDC_EXIT 1000
+#define IDC_ABOUT 1001
+
+
+#define IDB_DOT_RED 2001
+#define IDB_DOT_BLUE 2002
+#define IDB_SETTINGS 2003
+#define IDB_LOG 2004
+#define IDB_MINIMIZE 2005
+#define IDB_MAXIMIZE 2006
+#define IDB_CLOSE 2007
+#define IDB_FIXED 2008
