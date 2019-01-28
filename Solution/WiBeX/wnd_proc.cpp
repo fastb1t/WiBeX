@@ -13,6 +13,8 @@ static void OnPaint(HWND);                                                      
 static void OnTimer(HWND, UINT);                                                    // WM_TIMER
 static void OnDestroy(HWND);                                                        // WM_DESTROY
 
+static DC img_current_window;
+
 static DC img_dot_red;
 static DC img_dot_blue;
 static DC img_settings;
@@ -65,6 +67,9 @@ static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
     img_close.ReplaceColors(RGB(255, 255, 255), RGB(140, 140, 140));
     img_fixed.ReplaceColors(RGB(255, 255, 255), RGB(140, 140, 140));
 
+    //img_dot_red.TransformImage(16, 100);
+    //img_current_window.MakeScreenShot(GetForegroundWindow());
+
     return TRUE;
 }
 // [/OnCreate]
@@ -115,14 +120,16 @@ static void OnPaint(HWND hWnd)
     TCHAR szText[256] = { 0 };
     SIZE size;
 
-    img_dot_red.Draw(hMemDC, 10, 10);
-    img_dot_blue.Draw(hMemDC, 30, 10);
-    img_settings.Draw(hMemDC, 50, 10);
-    img_log.Draw(hMemDC, 70, 10);
-    img_minimize.Draw(hMemDC, 90, 10);
-    img_maximize.Draw(hMemDC, 110, 10);
-    img_close.Draw(hMemDC, 130, 10);
-    img_fixed.Draw(hMemDC, 150, 10);
+    //img_current_window.Draw(hMemDC, 0, 0);
+
+    //img_dot_red.Draw(hMemDC, 10, 10);
+    //img_dot_blue.Draw(hMemDC, 30, 10);
+    //img_settings.Draw(hMemDC, 50, 10);
+    //img_log.Draw(hMemDC, 70, 10);
+    //img_minimize.Draw(hMemDC, 90, 10);
+    //img_maximize.Draw(hMemDC, 110, 10);
+    //img_close.Draw(hMemDC, 130, 10);
+    //img_fixed.Draw(hMemDC, 150, 10);
 
     SelectObject(hMemDC, hOldFont);
     SelectObject(hMemDC, hOldBrush);
@@ -159,6 +166,8 @@ static void OnTimer(HWND hWnd, UINT id)
 // [OnDestroy]: WM_DESTROY
 static void OnDestroy(HWND hWnd)
 {
+    img_current_window.Clear();
+
     img_dot_red.Clear();
     img_dot_blue.Clear();
     img_settings.Clear();
@@ -167,6 +176,7 @@ static void OnDestroy(HWND hWnd)
     img_maximize.Clear();
     img_close.Clear();
     img_fixed.Clear();
+
     PostQuitMessage(0);
 }
 // [/OnDestroy]
