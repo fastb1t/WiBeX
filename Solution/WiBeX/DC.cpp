@@ -47,6 +47,8 @@ bool DC::CreateFromBitmap(HBITMAP hBitmap)
     if (!hBitmap)
         return false;
 
+    Clear();
+
     HDC hParentDC = GetDC(NULL);
     if (hParentDC)
     {
@@ -252,3 +254,23 @@ SIZE DC::GetOriginalSize()
     return original_size;
 }
 // [/DC::GetOriginalSize]
+
+
+// [DrawLine]:
+BOOL DrawLine(HDC hDC, int x0, int y0, int x1, int y1)
+{
+    MoveToEx(hDC, x0, y0, NULL);
+    return LineTo(hDC, x1, y1);
+}
+// [/DrawLine]
+
+
+// [DrawEmptyRectangle]:
+void DrawEmptyRectangle(HDC hDC, int x0, int y0, int x1, int y1)
+{
+    DrawLine(hDC, x0, y0, x0, y1);
+    DrawLine(hDC, x1, y0, x1, y1 + 1);
+    DrawLine(hDC, x0, y0, x1, y0);
+    DrawLine(hDC, x0, y1, x1, y1);
+}
+// [/DrawEmptyRectangle]

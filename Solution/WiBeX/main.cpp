@@ -38,7 +38,7 @@ int WINAPI _tWinMain(
     DWORD dwExStyle = WS_EX_APPWINDOW;
 
     RECT rc;
-    SetRect(&rc, 0, 0, 700, 500);
+    SetRect(&rc, 0, 0, 875, 560);
     AdjustWindowRectEx(&rc, dwStyle, FALSE, dwExStyle);
 
     const int iWindowWidth = rc.right - rc.left;

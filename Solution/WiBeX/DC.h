@@ -29,3 +29,6 @@ public:
     SIZE GetCurrentSize();
     SIZE GetOriginalSize();
 };
+
+BOOL DrawLine(HDC hDC, int x0, int y0, int x1, int y1);
+void DrawEmptyRectangle(HDC hDC, int x0, int y0, int x1, int y1);
