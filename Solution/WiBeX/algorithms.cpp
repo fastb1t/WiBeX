@@ -43,3 +43,13 @@ void DrawEmptyRectangle(HDC hDC, int x0, int y0, int x1, int y1)
     DrawLine(hDC, x0, y1, x1, y1);
 }
 // [/DrawEmptyRectangle]
+
+
+// [to_String]:
+String to_String(long int k)
+{
+    TCHAR szTemp[16] = { 0 };
+    wsprintf(szTemp, _T("%d"), k);
+    return szTemp;
+}
+// [/to_String]

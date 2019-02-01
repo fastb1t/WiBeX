@@ -121,11 +121,13 @@
     <ClCompile Include="algorithms.cpp" />
     <ClCompile Include="DC.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Process.cpp" />
     <ClCompile Include="wnd_proc.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="algorithms.h" />
     <ClInclude Include="DC.h" />
+    <ClInclude Include="Process.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="wnd_proc.h" />
   </ItemGroup>

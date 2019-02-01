@@ -10,3 +10,5 @@ BOOL SetPrivilege(HANDLE hToken, const TCHAR *lpszPrivilege, BOOL bEnablePrivile
 
 BOOL DrawLine(HDC hDC, int x0, int y0, int x1, int y1);
 void DrawEmptyRectangle(HDC hDC, int x0, int y0, int x1, int y1);
+
+String to_String(long int);

@@ -21,7 +21,7 @@ int WINAPI _tWinMain(
 {
     InitCommonControls();
 
-    LoadLibrary(_T("riched20.dll"));
+    LoadLibrary(_T("riched32.dll"));
     //LoadLibrary(_T("msftedit.dll"));
 
     if (!IsUserAnAdmin())

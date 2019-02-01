@@ -12,10 +12,7 @@
 static BOOL OnCreate(HWND, LPCREATESTRUCT);                                     	// WM_CREATE
 static void OnCommand(HWND, int, HWND, UINT);                                      	// WM_COMMAND
 static void OnPaint(HWND);                                                        	// WM_PAINT
-static void OnTimer(HWND, UINT);                                                    // WM_TIMER
 static void OnDestroy(HWND);                                                        // WM_DESTROY
-
-#define IDT_TIMER1 1000
 
 #define LOG_ERROR 0x01
 #define LOG_DEFAULT 0x02
@@ -23,6 +20,13 @@ static void OnDestroy(HWND);                                                    
 #define IDC_LOG                     20
 #define IDC_FIXED_WINDOW            21
 #define IDC_CAPTURE_WINDOW_CURSOR   22
+
+#define IDC_CLIENT_CLASS_NAME       100
+#define IDC_CLIENT_TITLE            101
+#define IDC_CLIENT_PROCESS_NAME     102
+#define IDC_CLIENT_PROCESS_PID      103
+#define IDC_CLIENT_PATH             104
+#define IDC_CLIENT_EXECUTE_TIME     105
 
 static bool capture_window_with_the_cursor = true;
 
@@ -41,6 +45,8 @@ static DC img_minimize;
 static DC img_maximize;
 static DC img_close;
 static DC img_fixed;
+
+static WNDPROC oldRichEditProcedure = NULL;
 
 
 // [DrawHeadlineForPart]: 
@@ -135,8 +141,8 @@ static DWORD WINAPI Thread(LPVOID lpObject)
     HWND hWnd = (HWND)lpObject;
     RECT rc;
     GetClientRect(hWnd, &rc);
-    const int window_width = rc.right - rc.left;
-    const int window_height = rc.bottom - rc.top;
+    const int iWindowWidth = rc.right - rc.left;
+    const int iWindowHeight = rc.bottom - rc.top;
 
     while (IsWindow(hWnd))
     {
@@ -149,6 +155,20 @@ static DWORD WINAPI Thread(LPVOID lpObject)
         //    SelectWindow(hWnd, process.getWindow());
 
         SetRect(&rc, 0, 0, 420 + 7, 220 + 29);
+        InvalidateRect(hWnd, &rc, FALSE);
+
+
+        SYSTEMTIME st;
+        GetLocalTime(&st);
+        wsprintf(szCurrentTime, _T("%s%d.%s%d.%d %s%d:%s%d:%s%d"),
+            st.wDay <= 9 ? _T("0") : _T(""), st.wDay,
+            st.wMonth <= 9 ? _T("0") : _T(""), st.wMonth,
+            st.wYear,
+            st.wHour <= 9 ? _T("0") : _T(""), st.wHour,
+            st.wMinute <= 9 ? _T("0") : _T(""), st.wMinute,
+            st.wSecond <= 9 ? _T("0") : _T(""), st.wSecond
+        );
+        SetRect(&rc, 0, iWindowHeight - 156 + 2, (iWindowWidth >> 1), iWindowHeight - 156 + 2 + 20);
         InvalidateRect(hWnd, &rc, FALSE);
 
         Sleep(1000);
@@ -205,9 +225,6 @@ bool AddTextToLog(HWND hParentWnd, String str, int mode)
 // [/AddTextToLog]
 
 
-static WNDPROC oldRichEditProcedure = NULL;
-
-
 // [NewRichEditProcedure]:
 static LRESULT CALLBACK NewRichEditProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -252,6 +269,9 @@ static LRESULT CALLBACK NewRichEditProcedure(HWND hWnd, UINT msg, WPARAM wParam,
         }
     }
 
+    case WM_ERASEBKGND:
+        return 0;
+
     default:
         break;
     }
@@ -268,7 +288,6 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
         HANDLE_MSG(hWnd, WM_CREATE, OnCreate);
         HANDLE_MSG(hWnd, WM_COMMAND, OnCommand);
         HANDLE_MSG(hWnd, WM_PAINT, OnPaint);
-        HANDLE_MSG(hWnd, WM_TIMER, OnTimer);
         HANDLE_MSG(hWnd, WM_DESTROY, OnDestroy);
 
     case WM_ERASEBKGND:
@@ -281,20 +300,6 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
         return (LRESULT)GetStockBrush(NULL_BRUSH);
     }
     break;
-
-    //case WM_NOTIFY:
-    //{
-    //    const MSGFILTER * pF = (MSGFILTER *)lParam;
-    //    if (pF->nmhdr.hwndFrom == GetDlgItem(hWnd, IDC_LOG))
-    //    {
-    //        if (pF->msg == WM_RBUTTONDOWN)
-    //        {
-    //            //SetWindowText(hWnd, "right  button  clicked");
-    //            //SendMessage(pF->nmhdr.hwndFrom, WM_COPY, 0, 0L);
-    //        }
-    //    }
-    //}
-    //break;
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
@@ -341,16 +346,16 @@ static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
     if (hLogWnd)
     {
         SendMessage(hLogWnd, EM_SETBKGNDCOLOR, 0, RGB(192, 192, 192));
-        //SendMessage(hLogWnd, EM_SETEVENTMASK, (WPARAM)0, (LPARAM)ENM_MOUSEEVENTS); // Для сповіщення про нажаття клавіш мишки. See WM_NOTIFY.
         SendMessage(hLogWnd, WM_SETFONT, (WPARAM)hFont, 0L);
 
         oldRichEditProcedure = (WNDPROC) SetWindowLongPtr(hLogWnd, GWL_WNDPROC, (LONG_PTR)NewRichEditProcedure);
 
-        AddTextToLog(hWnd, _T("line 1"), LOG_DEFAULT);
-        AddTextToLog(hWnd, _T("line 2"), LOG_DEFAULT);
-        AddTextToLog(hWnd, _T("line 3"), LOG_DEFAULT);
-        AddTextToLog(hWnd, _T("line 4"), LOG_DEFAULT);
-        AddTextToLog(hWnd, _T("line 1"), LOG_ERROR);
+        AddTextToLog(hWnd, _T("Line 1"), LOG_DEFAULT);
+        AddTextToLog(hWnd, _T("Line 2"), LOG_DEFAULT);
+        AddTextToLog(hWnd, _T("Line 3"), LOG_DEFAULT);
+        AddTextToLog(hWnd, _T("Line 4"), LOG_ERROR);
+        AddTextToLog(hWnd, _T("Line 5"), LOG_DEFAULT);
+        AddTextToLog(hWnd, _T("Line 6"), LOG_DEFAULT);
     }
 
 
@@ -366,9 +371,50 @@ static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
     SendMessage(GetDlgItem(hWnd, IDC_CAPTURE_WINDOW_CURSOR), WM_SETFONT, (WPARAM)hFont, 0L);
     SendMessage(GetDlgItem(hWnd, IDC_CAPTURE_WINDOW_CURSOR), BM_SETCHECK, capture_window_with_the_cursor, 0L);
 
+    /*
+    CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_READONLY, 120, 256, 308, 19, hWnd, (HMENU)IDC_CLIENT_CLASS_NAME, NULL, NULL);
+    CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_READONLY, 120, 276, 308, 19, hWnd, (HMENU)IDC_CLIENT_TITLE, NULL, NULL);
+    CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_READONLY, 120, 296, 308, 19, hWnd, (HMENU)IDC_CLIENT_PROCESS_NAME, NULL, NULL);
+    CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_READONLY, 120, 316, 308, 19, hWnd, (HMENU)IDC_CLIENT_PROCESS_PID, NULL, NULL);
+    CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_READONLY, 120, 336, 308, 19, hWnd, (HMENU)IDC_CLIENT_PATH, NULL, NULL);
+    CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_READONLY, 120, 356, 308, 19, hWnd, (HMENU)IDC_CLIENT_EXECUTE_TIME, NULL, NULL);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_CLASS_NAME), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_TITLE), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_PROCESS_NAME), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_PROCESS_PID), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_PATH), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_EXECUTE_TIME), WM_SETFONT, (WPARAM)hFont, 0L);
+    */
 
-    SendMessage(hWnd, WM_TIMER, (WPARAM)IDT_TIMER1, 0L);
-    SetTimer(hWnd, IDT_TIMER1, 1000, NULL);
+    struct {
+        int id;
+        int x;
+        int y;
+        int width;
+        int height;
+    } pinfo[6] = {
+        IDC_CLIENT_CLASS_NAME,      120, 256, 308, 19,
+        IDC_CLIENT_TITLE,           120, 276, 308, 19,
+        IDC_CLIENT_PROCESS_NAME,    120, 296, 308, 19,
+        IDC_CLIENT_PROCESS_PID,     120, 316, 308, 19,
+        IDC_CLIENT_PATH,            120, 336, 308, 19,
+        IDC_CLIENT_EXECUTE_TIME,    120, 356, 308, 19
+    };
+
+    DWORD dwPInfoStyle = WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | ES_SAVESEL | ES_NOHIDESEL | ES_MULTILINE | ES_READONLY;
+    for (int i = 0; i < 6; i++)
+    {
+        HWND hTmpWnd = CreateWindowEx(WS_EX_STATICEDGE, RICHEDIT_CLASS, _T(""), dwPInfoStyle,
+            pinfo[i].x, pinfo[i].y, pinfo[i].width, pinfo[i].height, hWnd, (HMENU)pinfo[i].id, lpcs->hInstance, 0);
+
+        if (hTmpWnd)
+        {
+            SendMessage(hTmpWnd, EM_SETBKGNDCOLOR, 0, RGB(192, 192, 192));
+            SendMessage(hTmpWnd, WM_SETFONT, (WPARAM)hFont, 0L);
+
+            oldRichEditProcedure = (WNDPROC)SetWindowLongPtr(hTmpWnd, GWL_WNDPROC, (LONG_PTR)NewRichEditProcedure);
+        }
+    }
 
     CreateThread(NULL, NULL, Thread, (LPVOID)hWnd, 0, NULL);
 
@@ -486,6 +532,24 @@ static void OnPaint(HWND hWnd)
         TextOut(hMemDC, 8 + 210 - (size.cx >> 1), 30 + 110 - size.cy, szText, lstrlen(szText));
     }
 
+    lstrcpy(szText, _T("Ім'я класу вікна"));
+    TextOut(hMemDC, 7, 256, szText, lstrlen(szText));
+
+    lstrcpy(szText, _T("Заголовок вікна"));
+    TextOut(hMemDC, 7, 276, szText, lstrlen(szText));
+
+    lstrcpy(szText, _T("Назва процесу"));
+    TextOut(hMemDC, 7, 296, szText, lstrlen(szText));
+
+    lstrcpy(szText, _T("PID процесу"));
+    TextOut(hMemDC, 7, 316, szText, lstrlen(szText));
+
+    lstrcpy(szText, _T("Шлях до файлу"));
+    TextOut(hMemDC, 7, 336, szText, lstrlen(szText));
+
+    lstrcpy(szText, _T("Дата запуску"));
+    TextOut(hMemDC, 7, 356, szText, lstrlen(szText));
+
 
     SelectObject(hMemDC, hOldFont);
     SelectObject(hMemDC, hOldBrush);
@@ -500,37 +564,6 @@ static void OnPaint(HWND hWnd)
     EndPaint(hWnd, &ps);
 }
 // [/OnPaint]
-
-
-// [OnTimer]: WM_TIMER
-static void OnTimer(HWND hWnd, UINT id)
-{
-    RECT rc;
-    GetClientRect(hWnd, &rc);
-    const int iWindowWidth = rc.right - rc.left;
-    const int iWindowHeight = rc.bottom - rc.top;
-
-    switch (id)
-    {
-    case IDT_TIMER1:
-    {
-        SYSTEMTIME st;
-        GetLocalTime(&st);
-        wsprintf(szCurrentTime, _T("%s%d.%s%d.%d %s%d:%s%d:%s%d"),
-            st.wDay <= 9 ? _T("0") : _T(""), st.wDay,
-            st.wMonth <= 9 ? _T("0") : _T(""), st.wMonth,
-            st.wYear,
-            st.wHour <= 9 ? _T("0") : _T(""), st.wHour,
-            st.wMinute <= 9 ? _T("0") : _T(""), st.wMinute,
-            st.wSecond <= 9 ? _T("0") : _T(""), st.wSecond
-        );
-        SetRect(&rc, 0, iWindowHeight - 156 + 2, (iWindowWidth >> 1), iWindowHeight - 156 + 2 + 20);
-        InvalidateRect(hWnd, &rc, FALSE);
-    }
-    break;
-    }
-}
-// [/OnTimer]
 
 
 // [OnDestroy]: WM_DESTROY
@@ -550,7 +583,6 @@ static void OnDestroy(HWND hWnd)
     DeleteBrush(hHeadLineBrush);
     DeleteFont(hFont);
 
-    KillTimer(hWnd, IDT_TIMER1);
     PostQuitMessage(0);
 }
 // [/OnDestroy]
