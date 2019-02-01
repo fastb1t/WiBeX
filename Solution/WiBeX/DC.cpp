@@ -149,7 +149,7 @@ bool DC::MakeScreenShot(HWND hWnd)
 
 
 // [DC::TransformImage]:
-bool DC::TransformImage(long max_width, long max_height)
+bool DC::TransformImage(int max_width, int max_height)
 {
     if (!bIsOK || max_width == 0 || max_height == 0)
         return false;
@@ -196,7 +196,7 @@ bool DC::TransformImage(long max_width, long max_height)
 
 
 // [DC::Draw]:
-bool DC::Draw(HDC hDC, size_t x, size_t y)
+bool DC::Draw(HDC hDC, int x, int y)
 {
     if (!bIsOK || !hDC)
         return false;
@@ -254,23 +254,3 @@ SIZE DC::GetOriginalSize()
     return original_size;
 }
 // [/DC::GetOriginalSize]
-
-
-// [DrawLine]:
-BOOL DrawLine(HDC hDC, int x0, int y0, int x1, int y1)
-{
-    MoveToEx(hDC, x0, y0, NULL);
-    return LineTo(hDC, x1, y1);
-}
-// [/DrawLine]
-
-
-// [DrawEmptyRectangle]:
-void DrawEmptyRectangle(HDC hDC, int x0, int y0, int x1, int y1)
-{
-    DrawLine(hDC, x0, y0, x0, y1);
-    DrawLine(hDC, x1, y0, x1, y1 + 1);
-    DrawLine(hDC, x0, y0, x1, y0);
-    DrawLine(hDC, x0, y1, x1, y1);
-}
-// [/DrawEmptyRectangle]

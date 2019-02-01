@@ -20,8 +20,8 @@ public:
     bool CreateFromBitmap(HBITMAP hBitmap);
     bool ReplaceColors(COLORREF clrOldColor, COLORREF clrNewColor);
     bool MakeScreenShot(HWND hWnd);
-    bool TransformImage(long max_width, long max_height);
-    bool Draw(HDC hDC, size_t x, size_t y);
+    bool TransformImage(int max_width, int max_height);
+    bool Draw(HDC hDC, int x, int y);
     bool RestoreSize();
     
     bool HasImage();
@@ -29,6 +29,3 @@ public:
     SIZE GetCurrentSize();
     SIZE GetOriginalSize();
 };
-
-BOOL DrawLine(HDC hDC, int x0, int y0, int x1, int y1);
-void DrawEmptyRectangle(HDC hDC, int x0, int y0, int x1, int y1);

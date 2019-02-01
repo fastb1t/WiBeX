@@ -1,6 +1,8 @@
 #include <tchar.h>
 #include <windows.h>
 #include <windowsx.h>
+#include <richedit.h>
+#include <commctrl.h>
 
 #include "wnd_proc.h"
 #include "resource.h"
@@ -14,6 +16,13 @@ static void OnTimer(HWND, UINT);                                                
 static void OnDestroy(HWND);                                                        // WM_DESTROY
 
 #define IDT_TIMER1 1000
+
+#define LOG_ERROR 0x01
+#define LOG_DEFAULT 0x02
+
+#define IDC_LOG                     20
+#define IDC_FIXED_WINDOW            21
+#define IDC_CAPTURE_WINDOW_CURSOR   22
 
 static bool capture_window_with_the_cursor = true;
 
@@ -149,6 +158,108 @@ static DWORD WINAPI Thread(LPVOID lpObject)
 // [/Thread]
 
 
+// [AddTextToLog]:
+bool AddTextToLog(HWND hParentWnd, String str, int mode)
+{
+    if (!hParentWnd)
+        return false;
+
+    HWND hLogWnd = GetDlgItem(hParentWnd, IDC_LOG);
+    if (!hLogWnd)
+        return false;
+
+    CHARFORMAT cf;
+    RtlZeroMemory(&cf, sizeof(CHARFORMAT));
+    SendMessage(hLogWnd, EM_GETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+
+    cf.cbSize = sizeof(cf);
+    cf.dwMask = CFM_COLOR;
+    cf.dwEffects = 0;
+    lstrcpy(cf.szFaceName, _T("Times New Roman"));
+
+    if (mode == LOG_ERROR)
+        cf.crTextColor = RGB(230, 20, 20);
+    else
+        cf.crTextColor = RGB(30, 30, 30);
+
+    TCHAR szTime[128] = { 0 };
+
+    SYSTEMTIME st;
+    GetLocalTime(&st);
+    wsprintf(szTime, _T("[%s%d.%s%d.%d %s%d:%s%d:%s%d]: "),
+        st.wDay <= 9 ? _T("0") : _T(""), st.wDay,
+        st.wMonth <= 9 ? _T("0") : _T(""), st.wMonth,
+        st.wYear,
+        st.wHour <= 9 ? _T("0") : _T(""), st.wHour,
+        st.wMinute <= 9 ? _T("0") : _T(""), st.wMinute,
+        st.wSecond <= 9 ? _T("0") : _T(""), st.wSecond);
+
+    String out = szTime + str + _T("\n");
+
+    SendMessage(hLogWnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
+    SendMessage(hLogWnd, EM_REPLACESEL, 0, (LPARAM)out.c_str());
+    SendMessage(hLogWnd, WM_VSCROLL, SB_BOTTOM, 0L);
+
+    return true;
+}
+// [/AddTextToLog]
+
+
+static WNDPROC oldRichEditProcedure = NULL;
+
+
+// [NewRichEditProcedure]:
+static LRESULT CALLBACK NewRichEditProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch (msg)
+    {
+    case WM_RBUTTONDOWN:
+    {
+        POINT pt;
+        pt.x = GET_X_LPARAM(lParam);
+        pt.y = GET_Y_LPARAM(lParam);
+
+        ClientToScreen(hWnd, &pt);
+
+        HMENU hFloatMenu = CreatePopupMenu();
+
+        TCHAR szText[128] = { 0 };
+        lstrcpy(szText, _T("Copy"));
+
+        MENUITEMINFO mii;
+        RtlZeroMemory(&mii, sizeof(MENUITEMINFO));
+        mii.cbSize = sizeof(MENUITEMINFO);
+        mii.fMask = MIIM_STATE | MIIM_TYPE | MIIM_SUBMENU | MIIM_ID;
+        mii.fType = MFT_STRING;
+        mii.fState = MFS_ENABLED;
+        mii.dwTypeData = szText;
+        mii.cch = lstrlen(szText);
+        mii.wID = 1000;
+        mii.hSubMenu = NULL;
+        InsertMenuItem(hFloatMenu, 0, 0, &mii);
+
+        TrackPopupMenu(hFloatMenu, TPM_CENTERALIGN | TPM_LEFTBUTTON | TPM_VCENTERALIGN, pt.x, pt.y, 0, hWnd, NULL);
+        DestroyMenu(hFloatMenu);
+        return 0;
+    }
+
+    case WM_COMMAND:
+    {
+        if (LOWORD(wParam) == 1000)
+        {
+            SendMessage(hWnd, WM_COPY, 0, 0L);
+            return 0;
+        }
+    }
+
+    default:
+        break;
+    }
+    return CallWindowProc(oldRichEditProcedure, hWnd, msg, wParam, lParam);
+}
+// [/NewRichEditProcedure]
+
+
 // [WindowProcedure]: 
 LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -162,6 +273,28 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 
     case WM_ERASEBKGND:
         return 1;
+
+    case WM_CTLCOLORSTATIC:
+    {
+        HWND hTmpWnd = (HWND)lParam;
+        SetBkColor((HDC)wParam, RGB(192, 192, 192));
+        return (LRESULT)GetStockBrush(NULL_BRUSH);
+    }
+    break;
+
+    //case WM_NOTIFY:
+    //{
+    //    const MSGFILTER * pF = (MSGFILTER *)lParam;
+    //    if (pF->nmhdr.hwndFrom == GetDlgItem(hWnd, IDC_LOG))
+    //    {
+    //        if (pF->msg == WM_RBUTTONDOWN)
+    //        {
+    //            //SetWindowText(hWnd, "right  button  clicked");
+    //            //SendMessage(pF->nmhdr.hwndFrom, WM_COPY, 0, 0L);
+    //        }
+    //    }
+    //}
+    //break;
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
@@ -198,13 +331,47 @@ static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
 
     hFont = CreateFont(-12, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, _T("Arial"));
 
+
+    const int xcenter = iWindowWidth >> 1;
+
+    HWND hLogWnd = CreateWindowEx(WS_EX_STATICEDGE, RICHEDIT_CLASS, _T(""),
+        WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | ES_SAVESEL | ES_NOHIDESEL | ES_MULTILINE | ES_READONLY,
+        7, iWindowHeight - 160 + 33, xcenter - 7 - 7, 120, hWnd, (HMENU)IDC_LOG, lpcs->hInstance, 0);
+
+    if (hLogWnd)
+    {
+        SendMessage(hLogWnd, EM_SETBKGNDCOLOR, 0, RGB(192, 192, 192));
+        //SendMessage(hLogWnd, EM_SETEVENTMASK, (WPARAM)0, (LPARAM)ENM_MOUSEEVENTS); // Для сповіщення про нажаття клавіш мишки. See WM_NOTIFY.
+        SendMessage(hLogWnd, WM_SETFONT, (WPARAM)hFont, 0L);
+
+        oldRichEditProcedure = (WNDPROC) SetWindowLongPtr(hLogWnd, GWL_WNDPROC, (LONG_PTR)NewRichEditProcedure);
+
+        AddTextToLog(hWnd, _T("line 1"), LOG_DEFAULT);
+        AddTextToLog(hWnd, _T("line 2"), LOG_DEFAULT);
+        AddTextToLog(hWnd, _T("line 3"), LOG_DEFAULT);
+        AddTextToLog(hWnd, _T("line 4"), LOG_DEFAULT);
+        AddTextToLog(hWnd, _T("line 1"), LOG_ERROR);
+    }
+
+
+    CreateWindowEx(0, _T("button"), _T("Закріпити вікно поверх всіх вікон"),
+        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, xcenter + 9, iWindowHeight - 160 + 33, xcenter - 7 - 7 - 1, 20,
+        hWnd, (HMENU)IDC_FIXED_WINDOW, NULL, NULL);
+    SendMessage(GetDlgItem(hWnd, IDC_FIXED_WINDOW), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_FIXED_WINDOW), BM_SETCHECK, true, 0L);
+
+    CreateWindowEx(0, _T("button"), _T("Захоплення вікна курсором"),
+        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, xcenter + 9, iWindowHeight - 160 + 33 + 20, xcenter - 7 - 7 - 1, 20,
+        hWnd, (HMENU)IDC_CAPTURE_WINDOW_CURSOR, NULL, NULL);
+    SendMessage(GetDlgItem(hWnd, IDC_CAPTURE_WINDOW_CURSOR), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CAPTURE_WINDOW_CURSOR), BM_SETCHECK, capture_window_with_the_cursor, 0L);
+
+
     SendMessage(hWnd, WM_TIMER, (WPARAM)IDT_TIMER1, 0L);
     SetTimer(hWnd, IDT_TIMER1, 1000, NULL);
 
-    DWORD dwThreadId = 0;
-    HANDLE hThread = CreateThread(NULL, NULL, Thread, (LPVOID)hWnd, 0, &dwThreadId);
-    //if (hThread)
-    //    CloseHandle(hThread);
+    CreateThread(NULL, NULL, Thread, (LPVOID)hWnd, 0, NULL);
+
     return TRUE;
 }
 // [/OnCreate]
@@ -231,6 +398,21 @@ static void OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
             _T("     Telegram: @fastb1t\n")
             _T("Compiled: ") __DATE__ _T(" ") __TIME__,
             _T("Information"), MB_OK | MB_ICONINFORMATION);
+    }
+    break;
+
+    case IDC_FIXED_WINDOW:
+    {
+        if (SendMessage(GetDlgItem(hWnd, IDC_FIXED_WINDOW), BM_GETCHECK, 0, 0L))
+            SetWindowPos(hWnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        else
+            SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+    }
+    break;
+
+    case IDC_CAPTURE_WINDOW_CURSOR:
+    {
+        capture_window_with_the_cursor = SendMessage(GetDlgItem(hWnd, IDC_CAPTURE_WINDOW_CURSOR), BM_GETCHECK, 0, 0L) ? true : false;
     }
     break;
     }
@@ -264,7 +446,7 @@ static void OnPaint(HWND hWnd)
 
     SelectFont(hMemDC, hFont);
 
-    DrawEmptyRectangle(hMemDC, 5, 5, iWindowWidth - 5, iWindowHeight - 160);
+    DrawEmptyRectangle(hMemDC, 5, 5, iWindowWidth - 5, iWindowHeight - 155);
     if (!img_current_window.HasImage())
     {
         lstrcpy(szText, _T("Window"));
@@ -279,14 +461,14 @@ static void OnPaint(HWND hWnd)
 
     const int xcenter = iWindowWidth >> 1;
 
-    DrawEmptyRectangle(hMemDC, 5, iWindowHeight - 156, xcenter - 5, iWindowHeight - 5);
-    DrawHeadlineForPart(hMemDC, 7, iWindowHeight - 156 + 2, xcenter - 7 - 7, _T("Log"), hHeadLineBrush, &img_log);
+    DrawEmptyRectangle(hMemDC, 5, iWindowHeight - 151, xcenter - 5, iWindowHeight - 5);
+    DrawHeadlineForPart(hMemDC, 7, iWindowHeight - 151 + 2, xcenter - 7 - 7, _T("Log"), hHeadLineBrush, &img_log);
 
     GetTextExtentPoint32(hMemDC, szCurrentTime, lstrlen(szCurrentTime), &size);
-    TextOut(hMemDC, xcenter - size.cx - 10, iWindowHeight - 156 + 4, szCurrentTime, lstrlen(szCurrentTime));
+    TextOut(hMemDC, xcenter - size.cx - 10, iWindowHeight - 151 + 4, szCurrentTime, lstrlen(szCurrentTime));
 
-    DrawEmptyRectangle(hMemDC, xcenter + 5, iWindowHeight - 156, iWindowWidth - 5, iWindowHeight - 5);
-    DrawHeadlineForPart(hMemDC, xcenter + 7, iWindowHeight - 156 + 2, xcenter - 7 - 6, _T("Settings"), hHeadLineBrush, &img_settings);
+    DrawEmptyRectangle(hMemDC, xcenter + 5, iWindowHeight - 151, iWindowWidth - 5, iWindowHeight - 5);
+    DrawHeadlineForPart(hMemDC, xcenter + 7, iWindowHeight - 151 + 2, xcenter - 7 - 6, _T("Settings"), hHeadLineBrush, &img_settings);
 
 
     DrawEmptyRectangle(hMemDC, 7, 29, 420 + 7, 220 + 27);
@@ -330,7 +512,7 @@ static void OnTimer(HWND hWnd, UINT id)
 
     switch (id)
     {
-    case 1000:
+    case IDT_TIMER1:
     {
         SYSTEMTIME st;
         GetLocalTime(&st);

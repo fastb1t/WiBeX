@@ -7,6 +7,8 @@
 #include "resource.h"
 #include "algorithms.h"
 
+#pragma comment(lib, "comctl32.lib")
+
 #define ShowErrorMessage(str) MessageBox(NULL, (str), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
 
 
@@ -17,6 +19,11 @@ int WINAPI _tWinMain(
     _In_opt_    TCHAR *lpCmdLine,
     _In_        int nShowCmd)
 {
+    InitCommonControls();
+
+    LoadLibrary(_T("riched20.dll"));
+    //LoadLibrary(_T("msftedit.dll"));
+
     if (!IsUserAnAdmin())
     {
         ShowErrorMessage(_T("Запустіть програму від імені адміністратора"));
@@ -35,7 +42,7 @@ int WINAPI _tWinMain(
     const TCHAR szClassName[] = _T("__wibex__class__");
 
     DWORD dwStyle = WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME;
-    DWORD dwExStyle = WS_EX_APPWINDOW;
+    DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_TOPMOST;
 
     RECT rc;
     SetRect(&rc, 0, 0, 875, 560);
