@@ -20,16 +20,16 @@ class Process {
 
 public:
     Process() {
-        this->clear();
+        this->Clear();
     }
 
     Process(const Process &);
 
     ~Process() {
-        this->clear();
+        this->Clear();
     }
 
-    void clear();
+    void Clear();
     bool isValid();
     bool setWindow(HWND hClientWnd);
 
@@ -44,23 +44,23 @@ public:
         return this->hWnd;
     }
 
-    DWORD getPID_D() const {
+    DWORD getProcPID() const {
         return this->dwPID;
     }
 
-    String GetXPos() const {
+    String getXPos() const {
         return to_String(this->window_rect.left);
     }
 
-    String GetYPos() const {
+    String getYPos() const {
         return to_String(this->window_rect.top);
     }
 
-    String GetWidth() const {
+    String getWidth() const {
         return to_String(this->window_rect.right - this->window_rect.left);
     }
 
-    String GetHeight() const {
+    String getHeight() const {
         return to_String(this->window_rect.bottom - this->window_rect.top);
     }
 
@@ -88,13 +88,13 @@ public:
         return this->execute_time;
     }
 
-    void showWindow(int nCmdShow) {
+    void showWindow(int iShowMode) {
         if (this->isValid())
-            ShowWindow(this->hWnd, nCmdShow);
+            ShowWindow(this->hWnd, iShowMode);
     }
 
     void closeWindow() {
         if (this->isValid())
-            SendMessage(this->hWnd, WM_CLOSE, 0, 0);
+            SendMessage(this->hWnd, WM_CLOSE, 0, 0L);
     }
 };

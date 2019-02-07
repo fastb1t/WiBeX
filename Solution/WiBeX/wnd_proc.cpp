@@ -8,31 +8,53 @@
 #include "resource.h"
 #include "algorithms.h"
 #include "DC.h"
+#include "Process.h"
 
 static BOOL OnCreate(HWND, LPCREATESTRUCT);                                     	// WM_CREATE
 static void OnCommand(HWND, int, HWND, UINT);                                      	// WM_COMMAND
 static void OnPaint(HWND);                                                        	// WM_PAINT
+static void OnDrawItem(HWND, const DRAWITEMSTRUCT *);                               // WM_DRAWITEM
 static void OnDestroy(HWND);                                                        // WM_DESTROY
 
-#define LOG_ERROR 0x01
-#define LOG_DEFAULT 0x02
+#define LOG_ERROR                       0x01
+#define LOG_DEFAULT                     0x02
 
-#define IDC_LOG                     20
-#define IDC_FIXED_WINDOW            21
-#define IDC_CAPTURE_WINDOW_CURSOR   22
+#define IDC_LOG                         20
+#define IDC_FIXED_WINDOW                21
+#define IDC_CAPTURE_WINDOW_WITH_CURSOR  22
 
-#define IDC_CLIENT_CLASS_NAME       100
-#define IDC_CLIENT_TITLE            101
-#define IDC_CLIENT_PROCESS_NAME     102
-#define IDC_CLIENT_PROCESS_PID      103
-#define IDC_CLIENT_PATH             104
-#define IDC_CLIENT_EXECUTE_TIME     105
+#define IDC_CLIENT_CLASS_NAME           100
+#define IDC_CLIENT_TITLE                101
+#define IDC_CLIENT_PROCESS_NAME         102
+#define IDC_CLIENT_PROCESS_PID          103
+#define IDC_CLIENT_PATH                 104
+#define IDC_CLIENT_EXECUTE_TIME         105
 
-static bool capture_window_with_the_cursor = true;
+#define IDC_CLIENT_MINIMIZE             200
+#define IDC_CLIENT_MAXIMIZE             201
+#define IDC_CLIENT_CLOSE                202
+#define IDC_CLIENT_FIXED_WINDOW         203
+
+#define IDC_CLIENT_X                    204
+#define IDC_CLIENT_Y                    205
+#define IDC_CLIENT_SIZE_X               206
+#define IDC_CLIENT_SIZE_Y               207
+
+#define IDC_CLIENT_MOVE_WINDOW          208
+#define IDC_CLIENT_SET_SIZE             209
+
+#define IDC_TERMINATE_PROCESS           210
+
+#define IDC_CLEAR_MEMORY                211
+
+#define IDC_INJECTOR_DLL                212
+#define IDC_INJECTOR_BROWSE_DLL         213
+#define IDC_INJECTOR_RUN                214
 
 static HFONT hFont;
 static HBRUSH hHeadLineBrush;
 
+static Process process;
 static DC img_current_window;
 
 static TCHAR szCurrentTime[1024] = { 0 };
@@ -49,84 +71,54 @@ static DC img_fixed;
 static WNDPROC oldRichEditProcedure = NULL;
 
 
-// [DrawHeadlineForPart]: 
-void DrawHeadlineForPart(HDC hDC, int x, int y, int iWidth, const TCHAR *szText, HBRUSH hBrush, DC *img)
-{
-    SIZE size;
-    GetTextExtentPoint32(hDC, szText, lstrlen(szText), &size);
-
-    int iHeight = size.cy;
-    if (iHeight < 18)
-        iHeight = 20;
-
-    HBRUSH hOldBrush = NULL;
-    if (hBrush)
-        hOldBrush = SelectBrush(hDC, hBrush);
-
-    Rectangle(hDC, x, y, x + iWidth + 1, y + iHeight + 1);
-
-    if (hOldBrush)
-        SelectBrush(hDC, hOldBrush);
-
-    if (img->HasImage())
-        img->Draw(hDC, x + 2, y + 2);
-
-    COLORREF clrOldColor = SetTextColor(hDC, 0x00);
-    TextOut(hDC, x + 20, y + (iHeight >> 1) - (size.cy >> 1), szText, lstrlen(szText));
-    SetTextColor(hDC, clrOldColor);
-}
-// [/DrawHeadlineForPart]
-
-
 // [SelectWindow]:
 static bool SelectWindow(HWND hMyWnd, HWND hWnd)
 {
-    // TODO: Доробити: якщо інформація про вікно не змінилася, то не оновлюємо.
     if (hWnd &&
         hWnd != hMyWnd &&
         hMyWnd != GetParent(hWnd))
     {
-        //ClearProccessInfo(hWnd);
+        if (GetWindowLongPtr(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
+            SendMessage(GetDlgItem(hMyWnd, IDC_CLIENT_FIXED_WINDOW), BM_SETCHECK, TRUE, 0L);
+        else
+            SendMessage(GetDlgItem(hMyWnd, IDC_CLIENT_FIXED_WINDOW), BM_SETCHECK, FALSE, 0L);
 
-        //if (GetWindowLongPtr(hWnd, GWL_EXSTYLE) & WS_EX_TOPMOST)
-        //    SendMessage(GetDlgItem(hMyWnd, IDC_CLIENT_FIXED_WINDOW), BM_SETCHECK, TRUE, 0L);
-        //else
-        //    SendMessage(GetDlgItem(hMyWnd, IDC_CLIENT_FIXED_WINDOW), BM_SETCHECK, FALSE, 0L);
-
-        //ScreenShot(&window_image, hWnd);
         img_current_window.MakeScreenShot(hWnd);
         img_current_window.TransformImage(400, 200);
+		
+        Process tmp_proc(process);
 
-        //Process tmp_proc(process);
+        process.setWindow(hWnd);
 
-        //process.setWindow(hWnd);
+        if (process.getClassName() != tmp_proc.getClassName())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_CLASS_NAME), process.getClassName().c_str());
 
-        //if (process.getClassName() != tmp_proc.getClassName())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_CLASS_NAME), process.getClassName().c_str());
+        if (process.getTitle() != tmp_proc.getTitle())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_TITLE), process.getTitle().c_str());
 
-        //if (process.getTitle() != tmp_proc.getTitle())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_TITLE), process.getTitle().c_str());
+        if (process.getExeName() != tmp_proc.getExeName())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_PROCESS_NAME), process.getExeName().c_str());
 
-        //if (process.getExeName() != tmp_proc.getExeName())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_PROCESS_NAME), process.getExeName().c_str());
+        if (process.getPID() != tmp_proc.getPID())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_PROCESS_PID), process.getPID().c_str());
 
-        //if (process.getPID() != tmp_proc.getPID())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_PROCESS_PID), process.getPID().c_str());
+        if (process.getFullPath() != tmp_proc.getFullPath())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_PATH), process.getFullPath().c_str());
 
-        //if (process.getFullPath() != tmp_proc.getFullPath())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_PATH), process.getFullPath().c_str());
+        if (process.getExecuteTime() != tmp_proc.getExecuteTime())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_EXECUTE_TIME), process.getExecuteTime().c_str());
 
-        //if (process.getExecuteTime() != tmp_proc.getExecuteTime())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_EXECUTE_TIME), process.getExecuteTime().c_str());
+        if (process.getXPos() != tmp_proc.getXPos())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_X), process.getXPos().c_str());
 
-        //if (process.GetXPos() != tmp_proc.GetXPos())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_X), process.GetXPos().c_str());
-        //if (process.GetYPos() != tmp_proc.GetYPos())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_Y), process.GetYPos().c_str());
-        //if (process.GetWidth() != tmp_proc.GetWidth())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_SIZE_X), process.GetWidth().c_str());
-        //if (process.GetHeight() != tmp_proc.GetHeight())
-        //    SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_SIZE_Y), process.GetHeight().c_str());
+        if (process.getYPos() != tmp_proc.getYPos())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_Y), process.getYPos().c_str());
+
+        if (process.getWidth() != tmp_proc.getWidth())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_SIZE_X), process.getWidth().c_str());
+
+        if (process.getHeight() != tmp_proc.getHeight())
+            SetWindowText(GetDlgItem(hMyWnd, IDC_CLIENT_SIZE_Y), process.getHeight().c_str());
 
         return true;
     }
@@ -146,13 +138,29 @@ static DWORD WINAPI Thread(LPVOID lpObject)
 
     while (IsWindow(hWnd))
     {
-        //if (!IsWindow(process.getWindow()))
-        //    ClearProccessInfo(hWnd);
+        if (!IsWindow(process.getWindow()))
+        {
+            img_current_window.Clear();
 
-        if (capture_window_with_the_cursor)
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_CLASS_NAME), _T("\0"));
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_TITLE), _T("\0"));
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_PROCESS_NAME), _T("\0"));
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_PROCESS_PID), _T("\0"));
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_PATH), _T("\0"));
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_EXECUTE_TIME), _T("\0"));
+
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_X), _T("0"));
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_Y), _T("0"));
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_SIZE_X), _T("0"));
+            SetWindowText(GetDlgItem(hWnd, IDC_CLIENT_SIZE_Y), _T("0"));
+
+            SendMessage(GetDlgItem(hWnd, IDC_CLIENT_FIXED_WINDOW), BM_SETCHECK, 0, 0L);
+        }
+
+        if (SendMessage(GetDlgItem(hWnd, IDC_CAPTURE_WINDOW_WITH_CURSOR), BM_GETCHECK, 0, 0L))
             SelectWindow(hWnd, GetForegroundWindow());
-        //else
-        //    SelectWindow(hWnd, process.getWindow());
+        else
+            SelectWindow(hWnd, process.getWindow());
 
         SetRect(&rc, 0, 0, 420 + 7, 220 + 29);
         InvalidateRect(hWnd, &rc, FALSE);
@@ -200,7 +208,7 @@ bool AddTextToLog(HWND hParentWnd, String str, int mode)
     if (mode == LOG_ERROR)
         cf.crTextColor = RGB(230, 20, 20);
     else
-        cf.crTextColor = RGB(30, 30, 30);
+        cf.crTextColor = RGB(0, 0, 0);
 
     TCHAR szTime[128] = { 0 };
 
@@ -288,6 +296,7 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
         HANDLE_MSG(hWnd, WM_CREATE, OnCreate);
         HANDLE_MSG(hWnd, WM_COMMAND, OnCommand);
         HANDLE_MSG(hWnd, WM_PAINT, OnPaint);
+        HANDLE_MSG(hWnd, WM_DRAWITEM, OnDrawItem);
         HANDLE_MSG(hWnd, WM_DESTROY, OnDestroy);
 
     case WM_ERASEBKGND:
@@ -296,8 +305,16 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
     case WM_CTLCOLORSTATIC:
     {
         HWND hTmpWnd = (HWND)lParam;
-        SetBkColor((HDC)wParam, RGB(192, 192, 192));
-        return (LRESULT)GetStockBrush(NULL_BRUSH);
+        if (hTmpWnd != GetDlgItem(hWnd, IDC_CLIENT_CLASS_NAME) &&
+            hTmpWnd != GetDlgItem(hWnd, IDC_CLIENT_TITLE) &&
+            hTmpWnd != GetDlgItem(hWnd, IDC_CLIENT_PROCESS_NAME) &&
+            hTmpWnd != GetDlgItem(hWnd, IDC_CLIENT_PROCESS_PID) &&
+            hTmpWnd != GetDlgItem(hWnd, IDC_CLIENT_PATH) &&
+            hTmpWnd != GetDlgItem(hWnd, IDC_CLIENT_EXECUTE_TIME))
+        {
+            SetBkColor((HDC)wParam, RGB(192, 192, 192));
+            return (LRESULT)GetStockBrush(NULL_BRUSH);
+        }
     }
     break;
     }
@@ -313,6 +330,8 @@ static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
     GetClientRect(hWnd, &rc);
     const int iWindowWidth = rc.right - rc.left;
     const int iWindowHeight = rc.bottom - rc.top;
+
+    HWND hTmpWnd = NULL;
 
     img_dot_red.CreateFromBitmap(LoadBitmap(lpcs->hInstance, MAKEINTRESOURCE(IDB_DOT_RED)));
     img_dot_blue.CreateFromBitmap(LoadBitmap(lpcs->hInstance, MAKEINTRESOURCE(IDB_DOT_BLUE)));
@@ -350,28 +369,21 @@ static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
 
         oldRichEditProcedure = (WNDPROC) SetWindowLongPtr(hLogWnd, GWL_WNDPROC, (LONG_PTR)NewRichEditProcedure);
 
-        AddTextToLog(hWnd, _T("Line 1"), LOG_DEFAULT);
-        AddTextToLog(hWnd, _T("Line 2"), LOG_DEFAULT);
-        AddTextToLog(hWnd, _T("Line 3"), LOG_DEFAULT);
-        AddTextToLog(hWnd, _T("Line 4"), LOG_ERROR);
-        AddTextToLog(hWnd, _T("Line 5"), LOG_DEFAULT);
-        AddTextToLog(hWnd, _T("Line 6"), LOG_DEFAULT);
+        AddTextToLog(hWnd, _T("Програма запущена успішно"), LOG_DEFAULT);
     }
 
 
-    CreateWindowEx(0, _T("button"), _T("Закріпити вікно поверх всіх вікон"),
-        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, xcenter + 9, iWindowHeight - 160 + 33, xcenter - 7 - 7 - 1, 20,
-        hWnd, (HMENU)IDC_FIXED_WINDOW, NULL, NULL);
-    SendMessage(GetDlgItem(hWnd, IDC_FIXED_WINDOW), WM_SETFONT, (WPARAM)hFont, 0L);
-    SendMessage(GetDlgItem(hWnd, IDC_FIXED_WINDOW), BM_SETCHECK, true, 0L);
+    hTmpWnd = CreateWindowEx(0, _T("button"), _T("Закріпити вікно поверх всіх вікон"), WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        xcenter + 9, iWindowHeight - 160 + 33, xcenter - 7 - 7 - 1, 20, hWnd, (HMENU)IDC_FIXED_WINDOW, NULL, NULL);
+    SendMessage(hTmpWnd, WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(hTmpWnd, BM_SETCHECK, true, 0L);
 
-    CreateWindowEx(0, _T("button"), _T("Захоплення вікна курсором"),
-        WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, xcenter + 9, iWindowHeight - 160 + 33 + 20, xcenter - 7 - 7 - 1, 20,
-        hWnd, (HMENU)IDC_CAPTURE_WINDOW_CURSOR, NULL, NULL);
-    SendMessage(GetDlgItem(hWnd, IDC_CAPTURE_WINDOW_CURSOR), WM_SETFONT, (WPARAM)hFont, 0L);
-    SendMessage(GetDlgItem(hWnd, IDC_CAPTURE_WINDOW_CURSOR), BM_SETCHECK, capture_window_with_the_cursor, 0L);
+    hTmpWnd = CreateWindowEx(0, _T("button"), _T("Захоплення вікна курсором"), WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX,
+        xcenter + 9, iWindowHeight - 160 + 33 + 20, xcenter - 7 - 7 - 1, 20, hWnd, (HMENU)IDC_CAPTURE_WINDOW_WITH_CURSOR, NULL, NULL);
+    SendMessage(hTmpWnd, WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(hTmpWnd, BM_SETCHECK, true, 0L);
 
-    /*
+    
     CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_READONLY, 120, 256, 308, 19, hWnd, (HMENU)IDC_CLIENT_CLASS_NAME, NULL, NULL);
     CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_READONLY, 120, 276, 308, 19, hWnd, (HMENU)IDC_CLIENT_TITLE, NULL, NULL);
     CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_READONLY, 120, 296, 308, 19, hWnd, (HMENU)IDC_CLIENT_PROCESS_NAME, NULL, NULL);
@@ -384,37 +396,49 @@ static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
     SendMessage(GetDlgItem(hWnd, IDC_CLIENT_PROCESS_PID), WM_SETFONT, (WPARAM)hFont, 0L);
     SendMessage(GetDlgItem(hWnd, IDC_CLIENT_PATH), WM_SETFONT, (WPARAM)hFont, 0L);
     SendMessage(GetDlgItem(hWnd, IDC_CLIENT_EXECUTE_TIME), WM_SETFONT, (WPARAM)hFont, 0L);
-    */
 
-    struct {
-        int id;
-        int x;
-        int y;
-        int width;
-        int height;
-    } pinfo[6] = {
-        IDC_CLIENT_CLASS_NAME,      120, 256, 308, 19,
-        IDC_CLIENT_TITLE,           120, 276, 308, 19,
-        IDC_CLIENT_PROCESS_NAME,    120, 296, 308, 19,
-        IDC_CLIENT_PROCESS_PID,     120, 316, 308, 19,
-        IDC_CLIENT_PATH,            120, 336, 308, 19,
-        IDC_CLIENT_EXECUTE_TIME,    120, 356, 308, 19
-    };
 
-    DWORD dwPInfoStyle = WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | ES_SAVESEL | ES_NOHIDESEL | ES_MULTILINE | ES_READONLY;
-    for (int i = 0; i < 6; i++)
-    {
-        HWND hTmpWnd = CreateWindowEx(WS_EX_STATICEDGE, RICHEDIT_CLASS, _T(""), dwPInfoStyle,
-            pinfo[i].x, pinfo[i].y, pinfo[i].width, pinfo[i].height, hWnd, (HMENU)pinfo[i].id, lpcs->hInstance, 0);
+    CreateWindowEx(0, _T("button"), _T(""), WS_CHILD | WS_VISIBLE | BS_AUTOCHECKBOX, iWindowWidth - 112, 9, 16, 16, hWnd, (HMENU)IDC_CLIENT_FIXED_WINDOW, NULL, NULL);
+    CreateWindowEx(0, _T("button"), _T(""), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, iWindowWidth - 72, 9, 16, 16, hWnd, (HMENU)IDC_CLIENT_MINIMIZE, NULL, NULL);
+    CreateWindowEx(0, _T("button"), _T(""), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, iWindowWidth - 50, 9, 16, 16, hWnd, (HMENU)IDC_CLIENT_MAXIMIZE, NULL, NULL);
+    CreateWindowEx(0, _T("button"), _T(""), WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, iWindowWidth - 28, 9, 16, 16, hWnd, (HMENU)IDC_CLIENT_CLOSE, NULL, NULL);
 
-        if (hTmpWnd)
-        {
-            SendMessage(hTmpWnd, EM_SETBKGNDCOLOR, 0, RGB(192, 192, 192));
-            SendMessage(hTmpWnd, WM_SETFONT, (WPARAM)hFont, 0L);
+    
+    int x = 433;
+    int y = 25;
 
-            oldRichEditProcedure = (WNDPROC)SetWindowLongPtr(hTmpWnd, GWL_WNDPROC, (LONG_PTR)NewRichEditProcedure);
-        }
-    }
+    DWORD dwOwnerDrawButtonStyle = WS_CHILD | WS_VISIBLE | WS_BORDER | BS_OWNERDRAW;
+
+    CreateWindowEx(0, _T("edit"), _T("0"), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_NUMBER, x + 10, y + 30, 40, 18, hWnd, (HMENU)IDC_CLIENT_X, NULL, NULL);
+    CreateWindowEx(0, _T("edit"), _T("0"), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_NUMBER, x + 70, y + 30, 40, 18, hWnd, (HMENU)IDC_CLIENT_Y, NULL, NULL);
+    CreateWindowEx(0, _T("edit"), _T("0"), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_NUMBER, x + 10, y + 55, 40, 18, hWnd, (HMENU)IDC_CLIENT_SIZE_X, NULL, NULL);
+    CreateWindowEx(0, _T("edit"), _T("0"), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL | ES_NUMBER, x + 70, y + 55, 40, 18, hWnd, (HMENU)IDC_CLIENT_SIZE_Y, NULL, NULL);
+    Edit_LimitText(GetDlgItem(hWnd, IDC_CLIENT_X), 4);
+    Edit_LimitText(GetDlgItem(hWnd, IDC_CLIENT_Y), 4);
+    Edit_LimitText(GetDlgItem(hWnd, IDC_CLIENT_SIZE_X), 4);
+    Edit_LimitText(GetDlgItem(hWnd, IDC_CLIENT_SIZE_Y), 4);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_X), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_Y), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_SIZE_X), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_SIZE_Y), WM_SETFONT, (WPARAM)hFont, 0L);
+
+    CreateWindowEx(0, _T("button"), _T("Змінити розміщення"), dwOwnerDrawButtonStyle, x + 130, y + 30, 300, 18, hWnd, (HMENU)IDC_CLIENT_MOVE_WINDOW, NULL, NULL);
+    CreateWindowEx(0, _T("button"), _T("Змінити розмір"), dwOwnerDrawButtonStyle, x + 130, y + 55, 300, 18, hWnd, (HMENU)IDC_CLIENT_SET_SIZE, NULL, NULL);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_MOVE_WINDOW), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_CLIENT_SET_SIZE), WM_SETFONT, (WPARAM)hFont, 0L);
+
+    CreateWindowEx(0, _T("button"), _T("Завершити процес"), dwOwnerDrawButtonStyle, x, y + 90, 210, 18, hWnd, (HMENU)IDC_TERMINATE_PROCESS, NULL, NULL);
+    SendMessage(GetDlgItem(hWnd, IDC_TERMINATE_PROCESS), WM_SETFONT, (WPARAM)hFont, 0L);
+    
+    CreateWindowEx(0, _T("button"), _T("Почистити память"), dwOwnerDrawButtonStyle, x + 220, y + 90, 210, 18, hWnd, (HMENU)IDC_CLEAR_MEMORY, NULL, NULL);
+    SendMessage(GetDlgItem(hWnd, IDC_CLEAR_MEMORY), WM_SETFONT, (WPARAM)hFont, 0L);
+
+    CreateWindowEx(0, _T("edit"), _T(""), WS_CHILD | WS_VISIBLE | ES_LEFT | ES_AUTOHSCROLL, x + 40, y + 160, 300, 18, hWnd, (HMENU)IDC_INJECTOR_DLL, NULL, NULL);
+    CreateWindowEx(0, _T("button"), _T("Вибрати"), dwOwnerDrawButtonStyle, x + 350, y + 160, 80, 18, hWnd, (HMENU)IDC_INJECTOR_BROWSE_DLL, NULL, NULL);
+    CreateWindowEx(0, _T("button"), _T("Інжектувати"), dwOwnerDrawButtonStyle, x, y + 185, 430, 18, hWnd, (HMENU)IDC_INJECTOR_RUN, NULL, NULL);
+    SendMessage(GetDlgItem(hWnd, IDC_INJECTOR_DLL), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_INJECTOR_BROWSE_DLL), WM_SETFONT, (WPARAM)hFont, 0L);
+    SendMessage(GetDlgItem(hWnd, IDC_INJECTOR_RUN), WM_SETFONT, (WPARAM)hFont, 0L);
 
     CreateThread(NULL, NULL, Thread, (LPVOID)hWnd, 0, NULL);
 
@@ -456,9 +480,157 @@ static void OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
     }
     break;
 
-    case IDC_CAPTURE_WINDOW_CURSOR:
+    case IDC_CLIENT_FIXED_WINDOW:
     {
-        capture_window_with_the_cursor = SendMessage(GetDlgItem(hWnd, IDC_CAPTURE_WINDOW_CURSOR), BM_GETCHECK, 0, 0L) ? true : false;
+        if (process.isValid())
+        {
+            if (SendMessage(GetDlgItem(hWnd, IDC_CLIENT_FIXED_WINDOW), BM_GETCHECK, 0, 0L))
+            {
+                if (!SetWindowPos(process.getWindow(), HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE))
+                    AddTextToLog(hWnd, _T("Не вдалося поставити захоплене вікно поверх всіх вікон"), LOG_ERROR);
+            }
+            else
+                SetWindowPos(process.getWindow(), HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
+        }
+        else
+            SendMessage(GetDlgItem(hWnd, IDC_CLIENT_FIXED_WINDOW), BM_SETCHECK, 0, 0L);
+    }
+    break;
+
+    case IDC_CLIENT_MINIMIZE:
+    {
+        process.showWindow(SW_MINIMIZE);
+    }
+    break;
+
+    case IDC_CLIENT_MAXIMIZE:
+    {
+        process.showWindow(SW_MAXIMIZE);
+    }
+    break;
+
+    case IDC_CLIENT_CLOSE:
+    {
+        process.closeWindow();
+    }
+    break;
+
+    case IDC_CLIENT_MOVE_WINDOW:
+    {
+        TCHAR tx[16] = { 0 };
+        TCHAR ty[16] = { 0 };
+        GetWindowText(GetDlgItem(hWnd, IDC_CLIENT_X), tx, 16);
+        GetWindowText(GetDlgItem(hWnd, IDC_CLIENT_Y), ty, 16);
+
+        int x = _ttoi(tx);
+        int y = _ttoi(ty);
+
+        if (process.isValid())
+            SetWindowPos(process.getWindow(), NULL, x, y, 0, 0, SWP_NOSIZE);
+    }
+    break;
+
+    case IDC_CLIENT_SET_SIZE:
+    {
+        TCHAR tx[16] = { 0 };
+        TCHAR ty[16] = { 0 };
+        GetWindowText(GetDlgItem(hWnd, IDC_CLIENT_SIZE_X), tx, 16);
+        GetWindowText(GetDlgItem(hWnd, IDC_CLIENT_SIZE_Y), ty, 16);
+
+        int x = _ttoi(tx);
+        int y = _ttoi(ty);
+
+        if (process.isValid())
+            SetWindowPos(process.getWindow(), NULL, 0, 0, x, y, SWP_NOMOVE);
+    }
+    break;
+
+    case IDC_TERMINATE_PROCESS:
+    {
+        if (process.getProcPID())
+        {
+            HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, process.getProcPID());
+            if (hProcess)
+            {
+                TerminateProcess(hProcess, 0);
+                CloseHandle(hProcess);
+            }
+            else
+                AddTextToLog(hWnd, _T("Не вдалося відкрити процес"), LOG_ERROR);
+        }
+        else
+            AddTextToLog(hWnd, _T("Спочатку виберіть вікно"), LOG_ERROR);
+    }
+    break;
+
+    case IDC_CLEAR_MEMORY:
+    {
+        if (process.getProcPID())
+        {
+            HANDLE hProcess = OpenProcess(PROCESS_ALL_ACCESS, true, process.getProcPID());
+            if (hProcess)
+            {
+                SetProcessWorkingSetSize(hProcess, 0xffffffff, 0xffffffff);
+                CloseHandle(hProcess);
+            }
+            else
+                AddTextToLog(hWnd, _T("Не вдалося відкрити процес"), LOG_ERROR);
+        }
+        else
+            AddTextToLog(hWnd, _T("Спочатку виберіть вікно"), LOG_ERROR);
+    }
+    break;
+
+    case IDC_INJECTOR_BROWSE_DLL:
+    {
+        TCHAR szFileName[2048] = { 0 };
+        OPENFILENAME ofn;
+        RtlZeroMemory(&ofn, sizeof(OPENFILENAME));
+        ofn.lStructSize = sizeof(OPENFILENAME);
+        ofn.hwndOwner = hWnd;
+        ofn.lpstrFilter = _T("Library Files (*.dll)\0*.dll\0All Files (*.*)\0*.*\0");
+        ofn.lpstrFile = szFileName;
+        ofn.nMaxFile = sizeof(szFileName);
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+        if (GetOpenFileName(&ofn))
+            SetWindowText(GetDlgItem(hWnd, IDC_INJECTOR_DLL), szFileName);
+        else
+            AddTextToLog(hWnd, _T("Не вдалося получити ім'я файлу для відкриття"), LOG_ERROR);
+
+        SetProcessWorkingSetSize(GetCurrentProcess(), 0xffffffff, 0xffffffff);
+    }
+    break;
+
+    case IDC_INJECTOR_RUN:
+    {
+        TCHAR szDllName[2048] = { 0 };
+        if (GetWindowText(GetDlgItem(hWnd, IDC_INJECTOR_DLL), szDllName, sizeof(szDllName) / sizeof(TCHAR)))
+        {
+            if (FileExists(szDllName))
+            {
+                if (process.getProcPID())
+                {
+                    std::string dll_name;
+
+#if defined(_UNICODE) || defined(UNICODE)
+                    dll_name = wchar_t_to_string(szDllName);
+#else
+                    dll_name = szDllName;
+#endif
+
+                    if (InjectDll(dll_name.c_str(), process.getProcPID()))
+                        AddTextToLog(hWnd, _T("Інжектовано успішно"), LOG_DEFAULT);
+                    else
+                        AddTextToLog(hWnd, _T("Сталася помилка при інжектуванні"), LOG_ERROR);
+                }
+                else
+                    AddTextToLog(hWnd, _T("Спочатку виберіть вікно"), LOG_ERROR);
+            }
+            else
+                AddTextToLog(hWnd, _T("Файл бібліотеки не знайдено"), LOG_ERROR);
+        }
+        else
+            AddTextToLog(hWnd, _T("Сталася невідома помилка"), LOG_ERROR);
     }
     break;
     }
@@ -504,6 +676,9 @@ static void OnPaint(HWND hWnd)
         wsprintf(szText, _T("Window (%d x %d)"), size.cx, size.cy);
         DrawHeadlineForPart(hMemDC, 7, 7, iWindowWidth - 7 - 7, szText, hHeadLineBrush, &img_dot_blue);
     }
+    
+    img_fixed.Draw(hMemDC, iWindowWidth - 130, 9);
+
 
     const int xcenter = iWindowWidth >> 1;
 
@@ -513,12 +688,13 @@ static void OnPaint(HWND hWnd)
     GetTextExtentPoint32(hMemDC, szCurrentTime, lstrlen(szCurrentTime), &size);
     TextOut(hMemDC, xcenter - size.cx - 10, iWindowHeight - 151 + 4, szCurrentTime, lstrlen(szCurrentTime));
 
+
     DrawEmptyRectangle(hMemDC, xcenter + 5, iWindowHeight - 151, iWindowWidth - 5, iWindowHeight - 5);
     DrawHeadlineForPart(hMemDC, xcenter + 7, iWindowHeight - 151 + 2, xcenter - 7 - 6, _T("Settings"), hHeadLineBrush, &img_settings);
 
 
     DrawEmptyRectangle(hMemDC, 7, 29, 420 + 7, 220 + 27);
-    if (img_current_window.HasImage())
+    if (process.isValid() && img_current_window.HasImage())
     {
         size = img_current_window.GetCurrentSize();
         int x = 200 - (size.cx >> 1);
@@ -531,6 +707,7 @@ static void OnPaint(HWND hWnd)
         GetTextExtentPoint32(hMemDC, szText, lstrlen(szText), &size);
         TextOut(hMemDC, 8 + 210 - (size.cx >> 1), 30 + 110 - size.cy, szText, lstrlen(szText));
     }
+
 
     lstrcpy(szText, _T("Ім'я класу вікна"));
     TextOut(hMemDC, 7, 256, szText, lstrlen(szText));
@@ -550,6 +727,26 @@ static void OnPaint(HWND hWnd)
     lstrcpy(szText, _T("Дата запуску"));
     TextOut(hMemDC, 7, 356, szText, lstrlen(szText));
 
+    
+    int x = 433;
+    int y = 25;
+
+    lstrcpy(szText, _T("Дії"));
+    TextOut(hMemDC, x + 10, y + 5, szText, lstrlen(szText));
+    DrawLine(hMemDC, x, y + 22, iWindowWidth - 13, y + 22);
+
+    TextOut(hMemDC, x, y + 30, _T("x"), 1);
+    TextOut(hMemDC, x + 60, y + 30, _T("y"), 1);
+    TextOut(hMemDC, x, y + 55, _T("x"), 1);
+    TextOut(hMemDC, x + 60, y + 55, _T("y"), 1);
+
+    lstrcpy(szText, _T("Інжектор"));
+    TextOut(hMemDC, x + 10, y + 133, szText, lstrlen(szText));
+    DrawLine(hMemDC, x, y + 150, iWindowWidth - 13, y + 150);
+
+    lstrcpy(szText, _T("DLL"));
+    TextOut(hMemDC, x, y + 160, szText, lstrlen(szText));
+
 
     SelectObject(hMemDC, hOldFont);
     SelectObject(hMemDC, hOldBrush);
@@ -564,6 +761,51 @@ static void OnPaint(HWND hWnd)
     EndPaint(hWnd, &ps);
 }
 // [/OnPaint]
+
+
+// [OnDrawItem]: WM_DRAWITEM
+static void OnDrawItem(HWND hWnd, const DRAWITEMSTRUCT *lpdis)
+{
+    if (lpdis->CtlType & ODT_BUTTON)
+    {
+        if (lpdis->itemState & ODS_SELECTED)
+            FillRect(lpdis->hDC, &lpdis->rcItem, (HBRUSH)GetStockObject(GRAY_BRUSH));
+        else
+            FillRect(lpdis->hDC, &lpdis->rcItem, (HBRUSH)GetStockObject(LTGRAY_BRUSH));
+
+        TCHAR szText[256] = { 0 };
+        memset(szText, 0, sizeof(szText));
+
+        RECT rc;
+        memcpy(&rc, &lpdis->rcItem, sizeof(RECT));
+
+        int iOldBkMode = SetBkMode(lpdis->hDC, TRANSPARENT);
+
+        TEXTMETRIC tm;
+        GetTextMetrics(lpdis->hDC, &tm);
+
+        rc.top += (rc.bottom - rc.top - tm.tmHeight) >> 1;
+
+        if (GetWindowText(lpdis->hwndItem, szText, sizeof(szText) / sizeof(TCHAR)))
+            DrawText(lpdis->hDC, szText, lstrlen(szText), &rc, DT_CENTER);
+
+        SetBkMode(lpdis->hDC, iOldBkMode);
+
+        switch (lpdis->CtlID)
+        {
+        case IDC_CLIENT_MINIMIZE:
+            img_minimize.Draw(lpdis->hDC, lpdis->rcItem.left, lpdis->rcItem.top);
+            break;
+        case IDC_CLIENT_MAXIMIZE:
+            img_maximize.Draw(lpdis->hDC, lpdis->rcItem.left, lpdis->rcItem.top);
+            break;
+        case IDC_CLIENT_CLOSE:
+            img_close.Draw(lpdis->hDC, lpdis->rcItem.left, lpdis->rcItem.top);
+            break;
+        }
+    }
+}
+// [/OnDrawItem]
 
 
 // [OnDestroy]: WM_DESTROY

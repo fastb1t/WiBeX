@@ -21,25 +21,50 @@ int WINAPI _tWinMain(
 {
     InitCommonControls();
 
-    LoadLibrary(_T("riched32.dll"));
-    //LoadLibrary(_T("msftedit.dll"));
-
     if (!IsUserAnAdmin())
     {
         ShowErrorMessage(_T("Запустіть програму від імені адміністратора"));
         return -1;
     }
 
+    const TCHAR szTitle[] = _T("WiBeX");
+    const TCHAR szClassName[] = _T("__wibex__class__");
+    const TCHAR szMutexName[] = _T("__wibex__mutex__");
+
+    HANDLE hMutex = NULL;
+    if (MutexIsExist(szMutexName))
+    {
+        HWND hWnd = FindWindow(szClassName, NULL);
+        if (hWnd)
+        {
+            if (IsIconic(hWnd))
+                ShowWindow(hWnd, SW_RESTORE);
+            SetForegroundWindow(hWnd);
+        }
+        return 0;
+    }
+    else
+    {
+        hMutex = CreateMutex(NULL, FALSE, szMutexName);
+        if (!hMutex || WaitForSingleObject(hMutex, 0) != WAIT_OBJECT_0)
+        {
+            ShowErrorMessage(_T("Could not create mutex!")); // Не удалось создать мьютекс.
+            if (!hMutex)
+                CloseHandle(hMutex);
+        }
+    }
+
+    LoadLibrary(_T("riched32.dll"));
+
     HANDLE hProcessToken = NULL;
     OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hProcessToken);
     if (!hProcessToken || !SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), TRUE))
     {
         ShowErrorMessage(_T("Не вдалося встановити привілегію SeDebugPrivilege"));
+        ReleaseMutex(hMutex);
+        CloseHandle(hMutex);
         return -1;
     }
-
-    const TCHAR szTitle[] = _T("WiBeX");
-    const TCHAR szClassName[] = _T("__wibex__class__");
 
     DWORD dwStyle = WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME;
     DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_TOPMOST;
@@ -69,6 +94,8 @@ int WINAPI _tWinMain(
     {
         ShowErrorMessage(_T("Window Registration Failed"));
         SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
+        ReleaseMutex(hMutex);
+        CloseHandle(hMutex);
         return -1;
     }
 
@@ -91,6 +118,8 @@ int WINAPI _tWinMain(
         ShowErrorMessage(_T("Window Creation Failed"));
         UnregisterClass(szClassName, hInstance);
         SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
+        ReleaseMutex(hMutex);
+        CloseHandle(hMutex);
         return -1;
     }
 
@@ -106,6 +135,8 @@ int WINAPI _tWinMain(
     
     UnregisterClass(szClassName, hInstance);
     SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
+    ReleaseMutex(hMutex);
+    CloseHandle(hMutex);
     return (int)msg.wParam;
 }
 // [/_tWinMain]

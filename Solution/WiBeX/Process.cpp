@@ -3,37 +3,41 @@
 // [Process::Process]:
 Process::Process(const Process &process)
 {
-    this->hWnd = process.hWnd;
-    this->dwPID = process.dwPID;
-    this->window_rect = process.window_rect;
-    this->class_name = process.class_name;
-    this->title = process.title;
-    this->exe_name = process.exe_name;
-    this->full_path = process.full_path;
-    this->execute_time = process.execute_time;
+    hWnd = process.hWnd;
+    dwPID = process.dwPID;
+
+    memcpy(&window_rect, &process.window_rect, sizeof(RECT));
+    
+    class_name = process.class_name;
+    title = process.title;
+    exe_name = process.exe_name;
+    full_path = process.full_path;
+    execute_time = process.execute_time;
 }
 // [/Process::Process]
 
 
-// [Process::clear]: очищаєм всю інформацію.
-void Process::clear()
+// [Process::Clear]:
+void Process::Clear()
 {
-    this->hWnd = NULL;
-    this->dwPID = 0;
-    this->window_rect = { 0, 0, 0, 0 };
-    this->class_name = _T("");
-    this->title = _T("");
-    this->exe_name = _T("");
-    this->full_path = _T("");
-    this->execute_time = _T("");
+    hWnd = NULL;
+    dwPID = 0;
+
+    RtlZeroMemory(&window_rect, sizeof(RECT));
+    
+    class_name = _T("");
+    title = _T("");
+    exe_name = _T("");
+    full_path = _T("");
+    execute_time = _T("");
 }
-// [/Process::clear]
+// [/Process::Clear]
 
 
-// [Process::isValid]: перевіряєм на валідність.
+// [Process::isValid]:
 bool Process::isValid()
 {
-    if (!this->hWnd)
+    if (!hWnd)
         return false;
     if (!IsWindow(hWnd))
         return false;
@@ -42,20 +46,20 @@ bool Process::isValid()
 // [/Process::isValid]
 
 
-// [Process::setWindow]: встановлюєм дескриптор вікна і оновлюєм всю інформацію про процес.
+// [Process::setWindow]:
 bool Process::setWindow(HWND hClientWnd)
 {
-    this->clear();
+    Clear();
     if (hClientWnd && IsWindow(hClientWnd))
     {
-        this->hWnd = hClientWnd;
+        hWnd = hClientWnd;
 
-        this->refresh_WindowRect();
-        this->refresh_WindowClassName();
-        this->refresh_WindowTitle();
-        this->refresh_ProcessID();
-        this->refresh_Path();
-        this->refresh_ExecuteTime();
+        refresh_WindowRect();
+        refresh_WindowClassName();
+        refresh_WindowTitle();
+        refresh_ProcessID();
+        refresh_Path();
+        refresh_ExecuteTime();
 
         return true;
     }
@@ -64,31 +68,33 @@ bool Process::setWindow(HWND hClientWnd)
 // [/Process::setWindow]
 
 
-// [Process::refresh_WindowRect]: получаєм розмір вікна.
+// [Process::refresh_WindowRect]:
 bool Process::refresh_WindowRect()
 {
-    this->window_rect = { 0, 0, 0, 0 };
+    RtlZeroMemory(&window_rect, sizeof(RECT));
 
-    if (this->isValid())
-        if (GetWindowRect(this->hWnd, &this->window_rect))
+    if (isValid())
+    {
+        if (GetWindowRect(hWnd, &window_rect))
             return true;
+    }
     return false;
 }
 // [/Process::refresh_WindowRect]
 
 
-// [Process::refresh_WindowClassName]: получаєм ім'я класу вікна.
+// [Process::refresh_WindowClassName]:
 bool Process::refresh_WindowClassName()
 {
-    this->class_name = _T("");
+    class_name = _T("");
 
-    if (this->isValid())
+    if (isValid())
     {
         TCHAR szTemp[1024];
         memset(szTemp, 0, sizeof(szTemp));
-        if (GetClassName(this->hWnd, szTemp, sizeof(szTemp) / sizeof(TCHAR)))
+        if (GetClassName(hWnd, szTemp, sizeof(szTemp) / sizeof(TCHAR)))
         {
-            this->class_name = szTemp;
+            class_name = szTemp;
             return true;
         }
     }
@@ -97,18 +103,18 @@ bool Process::refresh_WindowClassName()
 // [/Process::refresh_WindowClassName]
 
 
-// [Process::refresh_WindowCaption]: получаєм заголовок вікна.
+// [Process::refresh_WindowCaption]:
 bool Process::refresh_WindowTitle()
 {
-    this->title = _T("");
+    title = _T("");
 
-    if (this->isValid())
+    if (isValid())
     {
         TCHAR szTemp[1024];
         memset(szTemp, 0, sizeof(szTemp));
         if (GetWindowText(hWnd, szTemp, sizeof(szTemp) / sizeof(TCHAR)))
         {
-            this->title = szTemp;
+            title = szTemp;
             return true;
         }
     }
@@ -117,18 +123,18 @@ bool Process::refresh_WindowTitle()
 // [/Process::refresh_WindowCaption]
 
 
-// [Process::refresh_ProcessID]: получаєм PID процесу.
+// [Process::refresh_ProcessID]:
 bool Process::refresh_ProcessID()
 {
-    this->dwPID = 0;
+    dwPID = 0;
 
-    if (this->isValid())
+    if (isValid())
     {
         DWORD dwTemp = 0;
-        GetWindowThreadProcessId(this->hWnd, &dwTemp);
+        GetWindowThreadProcessId(hWnd, &dwTemp);
         if (dwTemp)
         {
-            this->dwPID = dwTemp;
+            dwPID = dwTemp;
             return true;
         }
     }
@@ -137,34 +143,34 @@ bool Process::refresh_ProcessID()
 // [/Process::refresh_ProcessID]
 
 
-// [Process::refresh_Path]: получаєм повнний шлях до процесу і його назву.
+// [Process::refresh_Path]:
 bool Process::refresh_Path()
 {
     bool bRetVal = false;
 
-    this->exe_name = _T("");
-    this->full_path = _T("");
+    exe_name = _T("");
+    full_path = _T("");
 
-    if (this->isValid() && this->dwPID)
+    if (isValid() && dwPID)
     {
-        HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, this->dwPID);
+        HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, dwPID);
         if (hProcess)
         {
             TCHAR szTemp[1024] = { 0 };
             DWORD dwSize = sizeof(szTemp) / sizeof(TCHAR) - 1;
             if (QueryFullProcessImageName(hProcess, 0, szTemp, &dwSize))
             {
-                this->exe_name = szTemp;
-                this->full_path = szTemp;
+                exe_name = szTemp;
+                full_path = szTemp;
 
                 size_t p = 0;
-                p = this->exe_name.rfind('\\');
+                p = exe_name.rfind('\\');
                 if (p != std::string::npos)
-                    this->exe_name.erase(0, p + 1);
+                    exe_name.erase(0, p + 1);
 
-                p = this->full_path.rfind('\\');
+                p = full_path.rfind('\\');
                 if (p != std::string::npos)
-                    this->full_path.erase(p, this->full_path.length());
+                    full_path.erase(p, full_path.length());
 
                 bRetVal = true;
             }
@@ -176,16 +182,16 @@ bool Process::refresh_Path()
 // [/Process::refresh_Path]
 
 
-// [Process::refresh_RunDate]: получаєм дату запуску процесу.
+// [Process::refresh_ExecuteTime]:
 bool Process::refresh_ExecuteTime()
 {
     bool bRetVal = false;
 
-    this->execute_time = _T("");
+    execute_time = _T("");
 
-    if (this->isValid() && this->dwPID)
+    if (isValid() && dwPID)
     {
-        HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, this->dwPID);
+        HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, dwPID);
         if (hProcess)
         {
             FILETIME file_time[4];
@@ -201,7 +207,7 @@ bool Process::refresh_ExecuteTime()
                 }
 
                 TCHAR szTemp[256];
-                memset(szTemp, 0, 256);
+                memset(szTemp, 0, sizeof(szTemp));
                 wsprintf(szTemp, _T("%s%d.%s%d.%d %s%d:%s%d:%s%d"),
                     system_time_local[0].wDay <= 9 ? _T("0") : _T(""), system_time_local[0].wDay,
                     system_time_local[0].wMonth <= 9 ? _T("0") : _T(""), system_time_local[0].wMonth,
@@ -209,7 +215,7 @@ bool Process::refresh_ExecuteTime()
                     system_time_local[0].wHour <= 9 ? _T("0") : _T(""), system_time_local[0].wHour,
                     system_time_local[0].wMinute <= 9 ? _T("0") : _T(""), system_time_local[0].wMinute,
                     system_time_local[0].wSecond <= 9 ? _T("0") : _T(""), system_time_local[0].wSecond);
-                this->execute_time = szTemp;
+                execute_time = szTemp;
                 bRetVal = true;
             }
             CloseHandle(hProcess);
@@ -217,4 +223,4 @@ bool Process::refresh_ExecuteTime()
     }
     return bRetVal;
 }
-// [/Process::refresh_RunDate]
+// [/Process::refresh_ExecuteTime]

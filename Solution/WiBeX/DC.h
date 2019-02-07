@@ -12,10 +12,15 @@ class DC {
     bool bIsScaled;
 
 public:
-    DC();
-    ~DC();
+    DC() {
+        Clear(true);
+    }
 
-    void Clear();
+    ~DC() {
+        Clear();
+    }
+
+    void Clear(bool init = false);
 
     bool CreateFromBitmap(HBITMAP hBitmap);
     bool ReplaceColors(COLORREF clrOldColor, COLORREF clrNewColor);
@@ -24,8 +29,19 @@ public:
     bool Draw(HDC hDC, int x, int y);
     bool RestoreSize();
     
-    bool HasImage();
-    HDC GetHDC();
-    SIZE GetCurrentSize();
-    SIZE GetOriginalSize();
+    bool HasImage() const {
+        return bIsOK;
+    }
+
+    HDC GetHDC() const {
+        return bIsOK ? hDC : NULL;
+    }
+
+    SIZE GetCurrentSize() const {
+        return size;
+    }
+
+    SIZE GetOriginalSize() const {
+        return original_size;
+    }
 };

@@ -1,42 +1,24 @@
 #include "DC.h"
 
-// [DC::DC]:
-DC::DC() :
-    hDC(NULL),
-    hBitmap(NULL),
-    hOldBitmap(NULL),
-    size({ 0, 0 }),
-    original_size({ 0, 0 }),
-    bIsOK(false),
-    bIsScaled(false)
-{
-
-}
-// [/DC::DC]
-
-
-// [DC::~DC]:
-DC::~DC()
-{
-    Clear();
-}
-// [/DC::~DC]
-
-
 // [DC::Clear]:
-void DC::Clear()
+void DC::Clear(bool init)
 {
-    if (hDC && hOldBitmap)
-        SelectObject(hDC, hOldBitmap);
-    if (hDC)
-        DeleteDC(hDC);
-    if (hBitmap)
-        DeleteObject(hBitmap);
+    if (!init)
+    {
+        if (hDC && hOldBitmap)
+            SelectObject(hDC, hOldBitmap);
+        if (hDC)
+            DeleteDC(hDC);
+        if (hBitmap)
+            DeleteObject(hBitmap);
+    }
     hDC = NULL;
     hBitmap = NULL;
     hOldBitmap = NULL;
     size = { 0, 0 };
+    original_size = { 0, 0 };
     bIsOK = false;
+    bIsScaled = false;
 }
 // [/DC::Clear]
 
@@ -151,7 +133,7 @@ bool DC::MakeScreenShot(HWND hWnd)
 // [DC::TransformImage]:
 bool DC::TransformImage(int max_width, int max_height)
 {
-    if (!bIsOK || max_width == 0 || max_height == 0)
+    if (!bIsOK || max_width <= 0 || max_height <= 0)
         return false;
 
     if (size.cx > size.cy)
@@ -222,35 +204,3 @@ bool DC::RestoreSize()
     return true;
 }
 // [/DC::RestoreSize]
-
-
-// [DC::HasImage]:
-bool DC::HasImage()
-{
-    return bIsOK;
-}
-// [/DC::HasImage]
-
-
-// [DC::GetHDC]:
-HDC DC::GetHDC()
-{
-    return bIsOK ? hDC : NULL;
-}
-// [/DC::GetHDC]
-
-
-// [DC::GetCurrentSize]:
-SIZE DC::GetCurrentSize()
-{
-    return size;
-}
-// [/DC::GetCurrentSize]
-
-
-// [DC::GetOriginalSize]:
-SIZE DC::GetOriginalSize()
-{
-    return original_size;
-}
-// [/DC::GetOriginalSize]
