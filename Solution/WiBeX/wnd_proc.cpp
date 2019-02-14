@@ -9,6 +9,7 @@
 #include "algorithms.h"
 #include "DC.h"
 #include "Process.h"
+#include "windows_viewer.h"
 
 static BOOL OnCreate(HWND, LPCREATESTRUCT);                                     	// WM_CREATE
 static void OnCommand(HWND, int, HWND, UINT);                                      	// WM_COMMAND
@@ -51,7 +52,7 @@ static void OnDestroy(HWND);                                                    
 #define IDC_INJECTOR_BROWSE_DLL         213
 #define IDC_INJECTOR_RUN                214
 
-static HFONT hFont;
+HFONT hFont;
 static HBRUSH hHeadLineBrush;
 
 static Process process;
@@ -455,6 +456,27 @@ static void OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
     case IDC_EXIT:
     {
         DestroyWindow(hWnd);
+    }
+    break;
+
+    /*
+    case IDM_SYSTEM_INFO:
+    {
+        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_SYSTEM_INFO), hWnd, (DLGPROC)SystemInfo_DialogProcedure);
+    }
+    break;
+    */
+
+    case IDM_WINDOWS_VIEWER:
+    {
+        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_WINDOWS_VIEWER), hWnd, (DLGPROC)WindowsViewer_DialogProcedure);
+    }
+    break;
+
+    case IDC_WINDOW_SELECTED:
+    {
+        if (hWndCtl)
+            SelectWindow(hWnd, hWndCtl);
     }
     break;
 

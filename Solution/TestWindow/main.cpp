@@ -16,6 +16,7 @@ static LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPAR
     {
         PAINTSTRUCT ps;
         HDC hDC = BeginPaint(hWnd, &ps);
+        FillRect(hDC, &ps.rcPaint, (HBRUSH)GetStockObject(GRAY_BRUSH));
         EndPaint(hWnd, &ps);
     }
     break;
