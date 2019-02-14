@@ -8,6 +8,7 @@
 #include "algorithms.h"
 
 #pragma comment(lib, "comctl32.lib")
+#pragma comment(lib, "ws2_32.lib")
 
 #define ShowErrorMessage(str) MessageBox(NULL, (str), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
 
@@ -66,6 +67,16 @@ int WINAPI _tWinMain(
         return -1;
     }
 
+    WSADATA wd;
+    if (WSAStartup(MAKEWORD(2, 0), &wd) != 0)
+    {
+        ShowErrorMessage(_T("WSAStartup failed"));
+        SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
+        ReleaseMutex(hMutex);
+        CloseHandle(hMutex);
+        return -1;
+    }
+
     DWORD dwStyle = WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME;
     DWORD dwExStyle = WS_EX_APPWINDOW | WS_EX_TOPMOST;
 
@@ -96,6 +107,7 @@ int WINAPI _tWinMain(
         SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
+        WSACleanup();
         return -1;
     }
 
@@ -120,6 +132,7 @@ int WINAPI _tWinMain(
         SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
+        WSACleanup();
         return -1;
     }
 
@@ -137,6 +150,7 @@ int WINAPI _tWinMain(
     SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
     ReleaseMutex(hMutex);
     CloseHandle(hMutex);
+    WSACleanup();
     return (int)msg.wParam;
 }
 // [/_tWinMain]

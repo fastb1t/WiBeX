@@ -10,6 +10,7 @@
 #include "DC.h"
 #include "Process.h"
 #include "windows_viewer.h"
+#include "system_info.h"
 
 static BOOL OnCreate(HWND, LPCREATESTRUCT);                                     	// WM_CREATE
 static void OnCommand(HWND, int, HWND, UINT);                                      	// WM_COMMAND
@@ -459,15 +460,13 @@ static void OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
     }
     break;
 
-    /*
-    case IDM_SYSTEM_INFO:
+    case IDC_SYSTEM_INFO:
     {
         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_SYSTEM_INFO), hWnd, (DLGPROC)SystemInfo_DialogProcedure);
     }
     break;
-    */
 
-    case IDM_WINDOWS_VIEWER:
+    case IDC_WINDOWS_VIEWER:
     {
         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_WINDOWS_VIEWER), hWnd, (DLGPROC)WindowsViewer_DialogProcedure);
     }

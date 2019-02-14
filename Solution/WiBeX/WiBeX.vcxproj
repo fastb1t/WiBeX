@@ -122,6 +122,7 @@
     <ClCompile Include="DC.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Process.cpp" />
+    <ClCompile Include="system_info.cpp" />
     <ClCompile Include="windows_viewer.cpp" />
     <ClCompile Include="wnd_proc.cpp" />
   </ItemGroup>
@@ -130,6 +131,7 @@
     <ClInclude Include="DC.h" />
     <ClInclude Include="Process.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="system_info.h" />
     <ClInclude Include="windows_viewer.h" />
     <ClInclude Include="wnd_proc.h" />
   </ItemGroup>
