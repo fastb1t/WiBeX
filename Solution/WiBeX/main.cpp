@@ -9,6 +9,7 @@
 
 #pragma comment(lib, "comctl32.lib")
 #pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "psapi.lib")
 
 #define ShowErrorMessage(str) MessageBox(NULL, (str), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
 
@@ -21,6 +22,12 @@ int WINAPI _tWinMain(
     _In_        int nShowCmd)
 {
     InitCommonControls();
+
+    /*
+    INITCOMMONCONTROLSEX icex;
+    icex.dwICC = ICC_LISTVIEW_CLASSES;
+    InitCommonControlsEx(&icex);
+    */
 
     if (!IsUserAnAdmin())
     {

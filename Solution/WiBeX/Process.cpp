@@ -150,7 +150,7 @@ bool Process::refresh_Path()
 
     exe_name = _T("");
     full_path = _T("");
-
+    
     if (isValid() && dwPID)
     {
         HANDLE hProcess = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, dwPID);

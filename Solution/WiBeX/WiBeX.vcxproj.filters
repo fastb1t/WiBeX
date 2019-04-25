@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Исходные файлы\Dialogs Windows">
+      <UniqueIdentifier>{f198bce3-9ba5-4bba-9e88-3b1383fb865f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Файлы заголовков\Dialogs Windows">
+      <UniqueIdentifier>{4f58b506-ffad-407b-89a2-ea5826731ef5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -30,11 +36,14 @@
     <ClCompile Include="Process.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="windows_viewer.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
     <ClCompile Include="system_info.cpp">
-      <Filter>Исходные файлы</Filter>
+      <Filter>Исходные файлы\Dialogs Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="windows_viewer.cpp">
+      <Filter>Исходные файлы\Dialogs Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="dependency_list.cpp">
+      <Filter>Исходные файлы\Dialogs Windows</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -54,10 +63,13 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="windows_viewer.h">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Dialogs Windows</Filter>
     </ClInclude>
     <ClInclude Include="system_info.h">
-      <Filter>Файлы заголовков</Filter>
+      <Filter>Файлы заголовков\Dialogs Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="dependency_list.h">
+      <Filter>Файлы заголовков\Dialogs Windows</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

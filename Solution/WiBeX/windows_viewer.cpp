@@ -263,16 +263,16 @@ static void DlgOnDrawItem(HWND hWnd, const DRAWITEMSTRUCT *lpDrawItem)
             rc.right = lpDrawItem->rcItem.right - 5;
 
             rc.top = lpDrawItem->rcItem.top + 10;
-            DrawText(lpDrawItem->hDC, process.getTitle().c_str(), process.getTitle().size(), &rc, DT_LEFT);
+            DrawText(lpDrawItem->hDC, process.getTitle().c_str(), (int)process.getTitle().size(), &rc, DT_LEFT);
 
             rc.top = lpDrawItem->rcItem.top + 30;
-            DrawText(lpDrawItem->hDC, process.getClassName().c_str(), process.getClassName().size(), &rc, DT_LEFT);
+            DrawText(lpDrawItem->hDC, process.getClassName().c_str(), (int)process.getClassName().size(), &rc, DT_LEFT);
 
             rc.top = lpDrawItem->rcItem.top + 50;
-            DrawText(lpDrawItem->hDC, process.getExeName().c_str(), process.getExeName().size(), &rc, DT_LEFT);
+            DrawText(lpDrawItem->hDC, process.getExeName().c_str(), (int)process.getExeName().size(), &rc, DT_LEFT);
 
             rc.top = lpDrawItem->rcItem.top + 70;
-            DrawText(lpDrawItem->hDC, process.getPID().c_str(), process.getPID().size(), &rc, DT_LEFT);
+            DrawText(lpDrawItem->hDC, process.getPID().c_str(), (int)process.getPID().size(), &rc, DT_LEFT);
 
             SetBkMode(lpDrawItem->hDC, iOldBkMode);
         }

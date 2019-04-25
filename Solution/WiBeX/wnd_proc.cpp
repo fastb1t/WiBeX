@@ -10,6 +10,7 @@
 #include "DC.h"
 #include "Process.h"
 #include "windows_viewer.h"
+#include "dependency_list.h"
 #include "system_info.h"
 
 static BOOL OnCreate(HWND, LPCREATESTRUCT);                                     	// WM_CREATE
@@ -56,7 +57,7 @@ static void OnDestroy(HWND);                                                    
 HFONT hFont;
 static HBRUSH hHeadLineBrush;
 
-static Process process;
+Process process;
 static DC img_current_window;
 
 static TCHAR szCurrentTime[1024] = { 0 };
@@ -213,7 +214,17 @@ bool AddTextToLog(HWND hParentWnd, String str, int mode)
         cf.crTextColor = RGB(0, 0, 0);
 
     TCHAR szTime[128] = { 0 };
-
+    /*
+    TCHAR szDate[128] = { 0 };
+    GetTimeFormat(LOCALE_USER_DEFAULT, 0, NULL, NULL, szTime, _countof(szTime));
+    GetDateFormat(LOCALE_USER_DEFAULT, 0, NULL, NULL, szDate, _countof(szDate));
+    String out = _T("[");
+    out += szDate;
+    out += _T(" ");
+    out += szTime;
+    out += _T("] ") + str + _T("\n");
+    //*/
+    //*
     SYSTEMTIME st;
     GetLocalTime(&st);
     wsprintf(szTime, _T("[%s%d.%s%d.%d %s%d:%s%d:%s%d]: "),
@@ -223,9 +234,9 @@ bool AddTextToLog(HWND hParentWnd, String str, int mode)
         st.wHour <= 9 ? _T("0") : _T(""), st.wHour,
         st.wMinute <= 9 ? _T("0") : _T(""), st.wMinute,
         st.wSecond <= 9 ? _T("0") : _T(""), st.wSecond);
-
+    
     String out = szTime + str + _T("\n");
-
+    //*/
     SendMessage(hLogWnd, EM_SETCHARFORMAT, SCF_SELECTION, (LPARAM)&cf);
     SendMessage(hLogWnd, EM_REPLACESEL, 0, (LPARAM)out.c_str());
     SendMessage(hLogWnd, WM_VSCROLL, SB_BOTTOM, 0L);
@@ -369,7 +380,7 @@ static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
         SendMessage(hLogWnd, EM_SETBKGNDCOLOR, 0, RGB(192, 192, 192));
         SendMessage(hLogWnd, WM_SETFONT, (WPARAM)hFont, 0L);
 
-        oldRichEditProcedure = (WNDPROC) SetWindowLongPtr(hLogWnd, GWL_WNDPROC, (LONG_PTR)NewRichEditProcedure);
+        oldRichEditProcedure = (WNDPROC) SetWindowLongPtr(hLogWnd, GWLP_WNDPROC, (LONG_PTR)NewRichEditProcedure);
 
         AddTextToLog(hWnd, _T("Програма запущена успішно"), LOG_DEFAULT);
     }
@@ -460,21 +471,27 @@ static void OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
     }
     break;
 
-    case IDC_SYSTEM_INFO:
-    {
-        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_SYSTEM_INFO), hWnd, (DLGPROC)SystemInfo_DialogProcedure);
-    }
-    break;
-
     case IDC_WINDOWS_VIEWER:
     {
         DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_WINDOWS_VIEWER), hWnd, (DLGPROC)WindowsViewer_DialogProcedure);
     }
     break;
 
+    case IDC_DEPENDENCY_LIST:
+    {
+        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_DEPENDENCY_LIST), hWnd, (DLGPROC)DependencyList_DialogProcedure);
+    }
+    break;
+
+    case IDC_SYSTEM_INFO:
+    {
+        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_SYSTEM_INFO), hWnd, (DLGPROC)SystemInfo_DialogProcedure);
+    }
+    break;
+
     case IDC_WINDOW_SELECTED:
     {
-        if (hWndCtl)
+        if (hWndCtl && IsWindow(hWndCtl))
             SelectWindow(hWnd, hWndCtl);
     }
     break;
