@@ -45,6 +45,9 @@
     <ClCompile Include="dependency_list.cpp">
       <Filter>Исходные файлы\Dialogs Windows</Filter>
     </ClCompile>
+    <ClCompile Include="about.cpp">
+      <Filter>Исходные файлы\Dialogs Windows</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="wnd_proc.h">
@@ -69,6 +72,9 @@
       <Filter>Файлы заголовков\Dialogs Windows</Filter>
     </ClInclude>
     <ClInclude Include="dependency_list.h">
+      <Filter>Файлы заголовков\Dialogs Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="about.h">
       <Filter>Файлы заголовков\Dialogs Windows</Filter>
     </ClInclude>
   </ItemGroup>

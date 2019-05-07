@@ -15,7 +15,7 @@ BOOL SetPrivilege(HANDLE hToken, const TCHAR *lpszPrivilege, BOOL bEnablePrivile
     else
         tp.Privileges[0].Attributes = 0;
 
-    if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), (PTOKEN_PRIVILEGES)NULL, (PDWORD)NULL))
+    if (!AdjustTokenPrivileges(hToken, FALSE, &tp, sizeof(TOKEN_PRIVILEGES), NULL, NULL))
         return FALSE;
 
     if (GetLastError() == ERROR_NOT_ALL_ASSIGNED)
@@ -119,29 +119,6 @@ bool FileExists(String file)
     return bRetVal;
 }
 // [/FileExists]
-
-
-// [MutexIsExist]:
-bool MutexIsExist(const TCHAR *szMutexName)
-{
-    if (!szMutexName || !(*szMutexName))
-        return false;
-
-    HANDLE hMutex = CreateMutex(NULL, FALSE, szMutexName);
-    if (!hMutex)
-        return false;
-
-    if (WaitForSingleObject(hMutex, 0) == WAIT_OBJECT_0)
-    {
-        ReleaseMutex(hMutex);
-        CloseHandle(hMutex);
-        return false;
-    }
-
-    CloseHandle(hMutex);
-    return true;
-}
-// [/MutexIsExist]
 
 
 // [InjectDll]:

@@ -4,14 +4,17 @@
 #include <richedit.h>
 #include <commctrl.h>
 
+#include "windows_viewer.h"
+#include "dependency_list.h"
+#include "system_info.h"
+#include "about.h"
+
 #include "wnd_proc.h"
 #include "resource.h"
 #include "algorithms.h"
 #include "DC.h"
 #include "Process.h"
-#include "windows_viewer.h"
-#include "dependency_list.h"
-#include "system_info.h"
+
 
 static BOOL OnCreate(HWND, LPCREATESTRUCT);                                     	// WM_CREATE
 static void OnCommand(HWND, int, HWND, UINT);                                      	// WM_COMMAND
@@ -53,6 +56,8 @@ static void OnDestroy(HWND);                                                    
 #define IDC_INJECTOR_DLL                212
 #define IDC_INJECTOR_BROWSE_DLL         213
 #define IDC_INJECTOR_RUN                214
+
+UINT WM_WINDOW_SELECTED = 0;
 
 HFONT hFont;
 static HBRUSH hHeadLineBrush;
@@ -304,6 +309,15 @@ static LRESULT CALLBACK NewRichEditProcedure(HWND hWnd, UINT msg, WPARAM wParam,
 // [WindowProcedure]: 
 LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    if (WM_WINDOW_SELECTED != 0 && msg == WM_WINDOW_SELECTED)
+    {
+        HWND hWindow = (HWND)wParam;
+        if (hWindow && IsWindow(hWindow))
+        {
+            SelectWindow(hWnd, hWindow);
+        }
+    }
+
     switch (msg)
     {
         HANDLE_MSG(hWnd, WM_CREATE, OnCreate);
@@ -339,6 +353,8 @@ LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lPar
 // [OnCreate]: WM_CREATE
 static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
 {
+    WM_WINDOW_SELECTED = RegisterWindowMessage(_T("WM_WINDOW_SELECTED"));
+
     RECT rc;
     GetClientRect(hWnd, &rc);
     const int iWindowWidth = rc.right - rc.left;
@@ -453,7 +469,12 @@ static BOOL OnCreate(HWND hWnd, LPCREATESTRUCT lpcs)
     SendMessage(GetDlgItem(hWnd, IDC_INJECTOR_BROWSE_DLL), WM_SETFONT, (WPARAM)hFont, 0L);
     SendMessage(GetDlgItem(hWnd, IDC_INJECTOR_RUN), WM_SETFONT, (WPARAM)hFont, 0L);
 
-    CreateThread(NULL, NULL, Thread, (LPVOID)hWnd, 0, NULL);
+    DWORD dwThreadId = 0;
+    HANDLE hThread = CreateThread(NULL, NULL, Thread, (LPVOID)hWnd, 0, &dwThreadId);
+    if (hThread != NULL)
+    {
+        CloseHandle(hThread);
+    }
 
     return TRUE;
 }
@@ -489,23 +510,9 @@ static void OnCommand(HWND hWnd, int id, HWND hWndCtl, UINT codeNotify)
     }
     break;
 
-    case IDC_WINDOW_SELECTED:
-    {
-        if (hWndCtl && IsWindow(hWndCtl))
-            SelectWindow(hWnd, hWndCtl);
-    }
-    break;
-
     case IDC_ABOUT:
     {
-        MessageBox(hWnd,
-            _T("#-> WiBeX <-#\n")
-            _T("Author: fastb1t\n")
-            _T("Feedback:\n")
-            _T("     Jabber: fastb1t@exploit.im\n")
-            _T("     Telegram: @fastb1t\n")
-            _T("Compiled: ") __DATE__ _T(" ") __TIME__,
-            _T("Information"), MB_OK | MB_ICONINFORMATION);
+        DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_ABOUT), hWnd, (DLGPROC)About_DialogProcedure);
     }
     break;
 

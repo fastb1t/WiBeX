@@ -1,6 +1,5 @@
 #include <tchar.h>
 #include <windows.h>
-#include <windowsx.h>
 #include <shlobj.h>
 
 #include "wnd_proc.h"
@@ -11,56 +10,52 @@
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "psapi.lib")
 
-#define ShowErrorMessage(str) MessageBox(NULL, (str), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
-
 
 // [_tWinMain]: entry point.
 int WINAPI _tWinMain(
-    _In_        HINSTANCE hInstance,
-    _In_        HINSTANCE hPrevInstance,
-    _In_opt_    TCHAR *lpCmdLine,
-    _In_        int nShowCmd)
+    _In_        HINSTANCE   hInstance,
+    _In_        HINSTANCE   hPrevInstance,
+    _In_opt_    TCHAR       *lpCmdLine,
+    _In_        int         nShowCmd)
 {
-    InitCommonControls();
-
-    /*
-    INITCOMMONCONTROLSEX icex;
-    icex.dwICC = ICC_LISTVIEW_CLASSES;
-    InitCommonControlsEx(&icex);
-    */
-
     if (!IsUserAnAdmin())
     {
-        ShowErrorMessage(_T("Запустіть програму від імені адміністратора"));
-        return -1;
+        MessageBox(NULL, _T("Запустите программу от имени администратора."), _T("Ошибка!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
+        return 0;
     }
 
     const TCHAR szTitle[] = _T("WiBeX");
     const TCHAR szClassName[] = _T("__wibex__class__");
     const TCHAR szMutexName[] = _T("__wibex__mutex__");
 
-    HANDLE hMutex = NULL;
-    if (MutexIsExist(szMutexName))
+    HANDLE hMutex = CreateMutex(NULL, FALSE, szMutexName);
+    if (hMutex == NULL)
     {
-        HWND hWnd = FindWindow(szClassName, NULL);
-        if (hWnd)
-        {
-            if (IsIconic(hWnd))
-                ShowWindow(hWnd, SW_RESTORE);
-            SetForegroundWindow(hWnd);
-        }
+        MessageBox(NULL, _T("Could not create mutex."), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
         return 0;
     }
     else
     {
-        hMutex = CreateMutex(NULL, FALSE, szMutexName);
-        if (!hMutex || WaitForSingleObject(hMutex, 0) != WAIT_OBJECT_0)
+        if (GetLastError() == ERROR_ALREADY_EXISTS)
         {
-            ShowErrorMessage(_T("Could not create mutex!")); // Не удалось создать мьютекс.
-            if (!hMutex)
-                CloseHandle(hMutex);
+            //MessageBox(NULL, _T("Экземпляр программы уже запущен."), _T("Ошибка!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
+
+            CloseHandle(hMutex);
+
+            HWND hWnd = FindWindow(szClassName, NULL);
+            if (hWnd != NULL)
+            {
+                if (IsIconic(hWnd))
+                {
+                    ShowWindow(hWnd, SW_RESTORE);
+                }
+                SetForegroundWindow(hWnd);
+            }
+            return 0;
         }
     }
+
+    InitCommonControls();
 
     LoadLibrary(_T("riched32.dll"));
 
@@ -68,20 +63,30 @@ int WINAPI _tWinMain(
     OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, &hProcessToken);
     if (!hProcessToken || !SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), TRUE))
     {
-        ShowErrorMessage(_T("Не вдалося встановити привілегію SeDebugPrivilege"));
+        MessageBox(NULL, _T("Не удалось установить привилегию SeDebugPrivilege."), _T("Ошибка!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
-        return -1;
+        return 0;
     }
 
     WSADATA wd;
-    if (WSAStartup(MAKEWORD(2, 0), &wd) != 0)
+    if (WSAStartup(MAKEWORD(2, 2), &wd) != 0)
     {
-        ShowErrorMessage(_T("WSAStartup failed"));
+        MessageBox(NULL, _T("WSAStartup failed."), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
         SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
-        return -1;
+        return 0;
+    }
+
+    if (LOBYTE(wd.wVersion) != 2 || HIBYTE(wd.wVersion) != 2)
+    {
+        MessageBox(NULL, _T("Could not find a usable version of Winsock.dll"), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
+        WSACleanup();
+        SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
+        ReleaseMutex(hMutex);
+        CloseHandle(hMutex);
+        return 1;
     }
 
     DWORD dwStyle = WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME;
@@ -110,12 +115,12 @@ int WINAPI _tWinMain(
 
     if (!RegisterClassEx(&wcex))
     {
-        ShowErrorMessage(_T("Window Registration Failed"));
+        MessageBox(NULL, _T("Window registration Failed."), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
+        WSACleanup();
         SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
-        WSACleanup();
-        return -1;
+        return 0;
     }
 
     HWND hWnd = CreateWindowEx(
@@ -134,30 +139,38 @@ int WINAPI _tWinMain(
 
     if (!hWnd)
     {
-        ShowErrorMessage(_T("Window Creation Failed"));
+        MessageBox(NULL, _T("Window creation failed."), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
         UnregisterClass(szClassName, hInstance);
+        WSACleanup();
         SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
         ReleaseMutex(hMutex);
         CloseHandle(hMutex);
-        WSACleanup();
-        return -1;
+        return 0;
     }
 
     ShowWindow(hWnd, SW_SHOWNORMAL);
     UpdateWindow(hWnd);
 
     MSG msg;
-    while (GetMessage(&msg, NULL, 0, 0))
+    BOOL bRet;
+    while ((bRet = GetMessage(&msg, NULL, 0, 0)) != 0)
     {
-        DispatchMessage(&msg);
-        TranslateMessage(&msg);
+        if (bRet == -1)
+        {
+            break;
+        }
+        else
+        {
+            DispatchMessage(&msg);
+            TranslateMessage(&msg);
+        }
     }
     
     UnregisterClass(szClassName, hInstance);
+    WSACleanup();
     SetPrivilege(hProcessToken, _T("SeDebugPrivilege"), FALSE);
     ReleaseMutex(hMutex);
     CloseHandle(hMutex);
-    WSACleanup();
     return (int)msg.wParam;
 }
 // [/_tWinMain]

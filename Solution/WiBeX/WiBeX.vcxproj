@@ -121,6 +121,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="about.cpp" />
     <ClCompile Include="algorithms.cpp" />
     <ClCompile Include="DC.cpp" />
     <ClCompile Include="dependency_list.cpp" />
@@ -131,6 +132,7 @@
     <ClCompile Include="wnd_proc.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="about.h" />
     <ClInclude Include="algorithms.h" />
     <ClInclude Include="DC.h" />
     <ClInclude Include="dependency_list.h" />

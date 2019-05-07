@@ -18,5 +18,4 @@ void DrawEmptyRectangle(HDC hDC, int x0, int y0, int x1, int y1);
 void DrawHeadlineForPart(HDC hDC, int x, int y, int iWidth, const TCHAR *szText, HBRUSH hBrush, DC *img);
 
 bool FileExists(String file);
-bool MutexIsExist(const TCHAR *szMutexName);
 bool InjectDll(const char *szDllName, DWORD dwProcessId);

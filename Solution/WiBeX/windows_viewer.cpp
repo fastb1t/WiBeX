@@ -18,6 +18,8 @@ static HBRUSH DlgOnCtlColorListBox(HWND, HDC, HWND, int);                   // W
 #define IDC_LISTBOX 1000
 #define IDC_REFRESH 1001
 
+extern UINT WM_WINDOW_SELECTED;
+
 struct WINDOW_INFO {
     HWND hWnd;
     DC *dc;
@@ -159,7 +161,9 @@ static void DlgOnCommand(HWND hWnd, int id, HWND, UINT)
         }
         WINDOW_INFO *wi = (WINDOW_INFO *)SendMessage(GetDlgItem(hWnd, IDC_LISTBOX), LB_GETITEMDATA, iItem, 0);
         if (wi)
-            SendMessage(GetParent(hWnd), WM_COMMAND, (WPARAM)IDC_WINDOW_SELECTED, (LPARAM)wi->hWnd);
+        {
+            SendMessage(GetParent(hWnd), WM_WINDOW_SELECTED, (WPARAM)wi->hWnd, 0L);
+        }
     }
     //break;
 
