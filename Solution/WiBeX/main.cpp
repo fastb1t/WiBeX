@@ -13,10 +13,10 @@
 
 // [_tWinMain]: entry point.
 int WINAPI _tWinMain(
-    _In_        HINSTANCE   hInstance,
-    _In_        HINSTANCE   hPrevInstance,
-    _In_opt_    TCHAR       *lpCmdLine,
-    _In_        int         nShowCmd)
+    _In_        HINSTANCE hInstance,
+    _In_opt_    HINSTANCE hPrevInstance,
+    _In_        TCHAR* lpCmdLine,
+    _In_        int nShowCmd)
 {
     if (!IsUserAnAdmin())
     {
@@ -106,12 +106,12 @@ int WINAPI _tWinMain(
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
     wcex.hInstance = hInstance;
-    wcex.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON));
     wcex.hCursor = LoadCursor(NULL, IDC_ARROW);
     wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wcex.lpszMenuName = MAKEINTRESOURCE(IDM_MENU);
     wcex.lpszClassName = szClassName;
-    wcex.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+    wcex.hIconSm = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_ICON));
 
     if (!RegisterClassEx(&wcex))
     {
