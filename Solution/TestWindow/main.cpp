@@ -1,6 +1,7 @@
 #include <tchar.h>
 #include <windows.h>
 
+
 // [WindowProcedure]:
 static LRESULT CALLBACK WindowProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -70,7 +71,7 @@ int WINAPI _tWinMain(
     if (!RegisterClassEx(&wcex))
     {
         MessageBox(NULL, _T("Window Registration Failed!"), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
-        return -1;
+        return 1;
     }
 
     HWND hWnd = CreateWindowEx(
@@ -85,13 +86,13 @@ int WINAPI _tWinMain(
         HWND_DESKTOP,
         NULL,
         hInstance,
-        NULL
-    );
+        NULL);
+
     if (!hWnd)
     {
         MessageBox(NULL, _T("Window Creation Failed!"), _T("Error!"), MB_OK | MB_ICONERROR | MB_TOPMOST);
         UnregisterClass(szClassName, hInstance);
-        return -1;
+        return 1;
     }
 
     ShowWindow(hWnd, SW_SHOWNORMAL);
