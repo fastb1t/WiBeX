@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _PROCESS_H_
+#define _PROCESS_H_
 
 #include <string>
 #include <windows.h>
@@ -98,3 +99,5 @@ public:
             SendMessage(this->hWnd, WM_CLOSE, 0, 0L);
     }
 };
+
+#endif

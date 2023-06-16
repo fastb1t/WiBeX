@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _DC_H_
+#define _DC_H_
 
 #include <windows.h>
 
@@ -45,3 +46,5 @@ public:
         return original_size;
     }
 };
+
+#endif

@@ -1,4 +1,5 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
+
 #include <tchar.h>
 #include <winsock2.h>
 #include <windows.h>
@@ -8,6 +9,7 @@
 
 static BOOL DlgOnInitDialog(HWND, HWND, LPARAM);                            // WM_INITDIALOG
 static void DlgOnCommand(HWND, int, HWND, UINT);                            // WM_COMMAND
+static void DlgOnPaint(HWND);                                               // WM_PAINT
 
 
 // [SystemInfo_DialogProcedure]:
@@ -17,18 +19,10 @@ BOOL CALLBACK SystemInfo_DialogProcedure(HWND hWnd, UINT msg, WPARAM wParam, LPA
     {
         HANDLE_MSG(hWnd, WM_INITDIALOG, DlgOnInitDialog);
         HANDLE_MSG(hWnd, WM_COMMAND, DlgOnCommand);
-
-    case WM_PAINT:
-    {
-        PAINTSTRUCT ps;
-        HDC hDC = BeginPaint(hWnd, &ps);
-        FillRect(hDC, &ps.rcPaint, GetStockBrush(LTGRAY_BRUSH));
-        EndPaint(hWnd, &ps);
-    }
-    break;
+        HANDLE_MSG(hWnd, WM_PAINT, DlgOnPaint);
 
     case WM_ERASEBKGND:
-        return 1;
+        return TRUE;
 
     default:
         return FALSE;
@@ -47,13 +41,16 @@ static BOOL DlgOnInitDialog(HWND hWnd, HWND, LPARAM)
     memset(szTemp, 0, sizeof(szTemp));
     dwSize = sizeof(szTemp) / sizeof(TCHAR);
     if (GetUserName(szTemp, &dwSize))
+    {
         SetWindowText(GetDlgItem(hWnd, 10001), szTemp);
+    }
 
     memset(szTemp, 0, sizeof(szTemp));
     dwSize = sizeof(szTemp) / sizeof(TCHAR);
     if (GetComputerName(szTemp, &dwSize))
+    {
         SetWindowText(GetDlgItem(hWnd, 10002), szTemp);
-
+    }
     
     memset(szTemp, 0, sizeof(szTemp));
     char szHostName[1024] = { 0 };
@@ -88,18 +85,24 @@ static BOOL DlgOnInitDialog(HWND hWnd, HWND, LPARAM)
     memset(szTemp, 0, sizeof(szTemp));
     dwSize = sizeof(szTemp) / sizeof(TCHAR);
     if (GetWindowsDirectory(szTemp, dwSize))
+    {
         SetWindowText(GetDlgItem(hWnd, 10006), szTemp);
+    }
 
     memset(szTemp, 0, sizeof(szTemp));
     dwSize = sizeof(szTemp) / sizeof(TCHAR);
     if (GetSystemDirectory(szTemp, dwSize))
+    {
         SetWindowText(GetDlgItem(hWnd, 10007), szTemp);
+    }
 
     memset(szTemp, 0, sizeof(szTemp));
     dwSize = sizeof(szTemp) / sizeof(TCHAR);
     if (GetTempPath(dwSize, szTemp))
+    {
         SetWindowText(GetDlgItem(hWnd, 10008), szTemp);
-    
+    }
+
     return TRUE;
 }
 // [/DlgOnInitDialog]
@@ -116,3 +119,14 @@ static void DlgOnCommand(HWND hWnd, int id, HWND, UINT)
     }
 }
 // [/DlgOnCommand]
+
+
+// [DlgOnPaint]: WM_PAINT
+static void DlgOnPaint(HWND hWnd)
+{
+    PAINTSTRUCT ps;
+    HDC hDC = BeginPaint(hWnd, &ps);
+    FillRect(hDC, &ps.rcPaint, GetStockBrush(LTGRAY_BRUSH));
+    EndPaint(hWnd, &ps);
+}
+// [/DlgOnPaint]

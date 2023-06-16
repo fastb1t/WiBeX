@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _ALGORITHMS_H_
+#define _ALGORITHMS_H_
 
 #include <tchar.h>
 #include <string>
@@ -19,3 +20,5 @@ void DrawHeadlineForPart(HDC hDC, int x, int y, int iWidth, const TCHAR *szText,
 
 bool FileExists(String file);
 bool InjectDll(const char *szDllName, DWORD dwProcessId);
+
+#endif

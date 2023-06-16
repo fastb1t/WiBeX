@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _RESOURCE_H_
+#define _RESOURCE_H_
 
 #include <windows.h>
 
@@ -27,3 +28,5 @@
 #define IDD_WINDOWS_VIEWER 4002
 #define IDD_DEPENDENCY_LIST 4003
 #define IDD_SYSTEM_INFO 4004
+
+#endif

@@ -75,7 +75,7 @@ static BOOL DlgOnInitDialog(HWND hWnd, HWND, LPARAM)
     const int iWindowHeight = rc.bottom - rc.top;
 
 
-    g_hBackgroundBrush = CreateSolidBrush(RGB(100, 130, 150));
+    g_hBackgroundBrush = CreateSolidBrush(RGB(150, 180, 200));
 
     g_hCaptionFont = CreateFont(17, 0, 0, 0, FW_BOLD, FALSE, FALSE, FALSE, DEFAULT_CHARSET,
         OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, DEFAULT_PITCH, _T("Arial"));
@@ -125,7 +125,7 @@ static void DlgOnPaint(HWND hWnd)
     HBITMAP hBitmap = CreateCompatibleBitmap(hDC, iWindowWidth, iWindowHeight);
     HBITMAP hOldBitmap = (HBITMAP)SelectObject(hMemDC, hBitmap);
 
-    FillRect(hMemDC, &ps.rcPaint, (HBRUSH)GetStockObject(LTGRAY_BRUSH));
+    FillRect(hMemDC, &ps.rcPaint, g_hBackgroundBrush);// (HBRUSH)GetStockObject(LTGRAY_BRUSH));
 
     int iOldBkMode = SetBkMode(hMemDC, TRANSPARENT);
     COLORREF clrOldColor = GetTextColor(hMemDC);
